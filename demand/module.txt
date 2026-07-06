@@ -1,0 +1,44 @@
+必须包含的结构：
+{
+  "problem_summary": "...",
+  "core_requirements": ["...", "..."],
+  "tags": {
+    "domain": "...",
+    "tech_stack": ["...", "..."],
+    "project_type": "...",
+    "architecture": "...",
+    "difficulty": "...",
+    "key_features": ["...", "..."]
+  }
+}
+
+
+举例：
+题目：智慧校园智能问答与服务推荐系统
+
+目标：
+
+为学生提供问答（课程/教务/生活）
+提供个性化服务推荐（社团/活动/课程）
+支持多端访问（Web + 小程序）
+
+解析结果（直接产出）
+{
+  "problem_summary": "构建一个面向校园的智能问答与推荐系统，支持多场景服务查询与个性化推荐",
+  "core_requirements": [
+    "实现自然语言问答系统",
+    "提供个性化推荐功能",
+    "支持Web或移动端访问",
+    "具备基础数据管理能力"
+  ],
+  "tags": {
+    "domain": "smart_campus",
+    "tech_stack": ["python", "fastapi", "react"],
+    "project_type": "ai_system",
+    "architecture": "microservices",
+    "difficulty": "medium",
+    "key_features": ["nlp", "chatbot", "recommendation"]
+  }
+}
+
+
