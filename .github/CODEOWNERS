@@ -1,20 +1,20 @@
 # CODEOWNERS 规则：自上而下匹配
 
 # 默认兜底负责人（你作为队长，兜底所有未划分目录）
-* @你的GitHub用户名
+* @3594350059syx-droid
 
 # 架构和计划文档由你全权主导
-/docs/architecture.md       @你的GitHub用户名
-/docs/development_plan.md   @你的GitHub用户名
+/docs/architecture.md       @3594350059syx-droid
+/docs/development_plan.md   @3594350059syx-droid
 
 # 后端模块与对应文档：由后端同学 A 负责审阅
-/backend/           @后端A的GitHub用户名
-/docs/api_spec.md   @后端A的GitHub用户名
-/docs/database.md   @后端A的GitHub用户名
+/backend/           @3594350059syx-droid
+/docs/api_spec.md   @3594350059syx-droid
+/docs/database.md   @3594350059syx-droid
 
 # 算法模型模块：由算法同学 B 负责审阅
 /algorithms/      @算法B的GitHub用户名
 /models/          @算法B的GitHub用户名
 
 # 前端展示模块：由前端同学 C 负责审阅
-/frontend/        @前端C的GitHub用户名
+/frontend/        @StarKing729
