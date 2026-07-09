@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+
+# Environment
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Models
+models/checkpoints/*.pth
+models/checkpoints/*.pt
+
+# Data
+data/database/*.db

@@ -1,0 +1,223 @@
+{
+  "project_id": "A15",
+  "source_note": "A15 的核心是电厂监盘 Agent：自然语言/语音指令解析、实时和历史时序数据分析、预警研判、故障诊断、知识库问答、模型自适应迭代与前端可视化。下面优先选择可以直接拼成端到端方案的开源 GitHub 项目。",
+  "tag_analysis": {
+    "inferred_tags": {
+      "domain": "industrial_power_plant_monitoring_agent",
+      "tech_stack": ["python", "typescript", "go", "react", "fastapi", "langgraph", "llm", "time_series"],
+      "project_type": "industrial_monitoring_agent_system",
+      "architecture": "web_app_plus_api_plus_agent_plus_observability",
+      "difficulty": "hard",
+      "key_features": ["natural_language_command", "time_series_analysis", "alert_trend_analysis", "fault_diagnosis", "rag_knowledge_base", "model_adaptation", "audit_trace", "dashboard"]
+    },
+    "tag_semantics": [
+      {
+        "tag": "industrial_power_plant_monitoring_agent",
+        "meaning": "不能只找通用聊天机器人，必须覆盖电厂监盘、预警和故障诊断这类长流程场景"
+      },
+      {
+        "tag": "time_series_analysis",
+        "meaning": "优先找支持实时/历史时序数据、趋势曲线、异常检测和预测的项目"
+      },
+      {
+        "tag": "rag_knowledge_base",
+        "meaning": "需要能把运行规程、故障案例、操作指导等文档接入检索与问答"
+      },
+      {
+        "tag": "alert_trend_analysis",
+        "meaning": "需要能做告警聚合、关联分析、阈值告警和历史统计报表"
+      },
+      {
+        "tag": "model_adaptation",
+        "meaning": "要能根据工况变化更新模型或重新训练，支撑持续迭代"
+      }
+    ]
+  },
+  "search_strategies": [
+    {
+      "strategy_name": "agent_orchestration_search",
+      "purpose": "优先找能把自然语言指令、工具调用、状态流转和人工介入串起来的 Agent 框架",
+      "github_queries": [
+        "langgraph agent workflow stateful orchestration",
+        "dify agent workflow rag observability",
+        "react agent tool calling human in the loop"
+      ],
+      "expected_hits": "Agent 编排框架、低代码工作流平台、可插拔工具链"
+    },
+    {
+      "strategy_name": "industrial_monitoring_search",
+      "purpose": "优先找时序监控、告警和仪表盘能力强的项目，覆盖趋势分析和预警研判",
+      "github_queries": [
+        "time series anomaly detection forecasting dashboard alerting",
+        "grafana alerting time series dashboard",
+        "industrial monitoring anomaly detection python"
+      ],
+      "expected_hits": "监控看板、告警中心、时序预测和异常检测库"
+    },
+    {
+      "strategy_name": "knowledge_base_pipeline_search",
+      "purpose": "优先找文档解析、RAG 管道、知识库和问答能力强的项目，用于规程和故障知识沉淀",
+      "github_queries": [
+        "rag knowledge base document parsing agent workflow",
+        "deep document understanding ragflow",
+        "knowledge base workflow agent ui"
+      ],
+      "expected_hits": "文档摄入/解析、知识库问答、RAG 工作流、企业级前端"
+    }
+  ],
+  "candidate_projects": [
+    {
+      "rank": 1,
+      "repo": "langchain-ai/langgraph",
+      "url": "https://github.com/langchain-ai/langgraph",
+      "language": ["Python", "TypeScript"],
+      "community_activity": "活跃，官方定位就是构建有状态、可持久化、可观察的 Agent 工作流",
+      "scores": {
+        "tag_match": 10,
+        "engineering_completeness": 9,
+        "reusability": 10,
+        "community_activity": 10,
+        "modification_cost": "中"
+      },
+      "why_usable": "A15 的核心闭环是‘指令输入 -> 智能解析 -> 工具调用 -> 结果反馈 -> 模型优化’，LangGraph 正好提供状态图、工具调用、持久化、human-in-the-loop 和远程执行的基础能力。",
+      "reusable_parts": [
+        "StateGraph / 有状态流程编排",
+        "工具调用与条件分支",
+        "持久化与线程状态管理",
+        "human-in-the-loop 审批/干预"
+      ],
+      "needs_changes": [
+        "需要接入电厂数据源与告警服务",
+        "需要补充面向监盘场景的工具集",
+        "需要增加趋势分析、故障诊断和报告输出节点"
+      ],
+      "how_to_embed": "适合作为 A15 的 Agent 编排内核，把数据查询、预警研判、知识库问答、故障诊断和模型迭代拆成图中的不同节点。"
+    },
+    {
+      "rank": 2,
+      "repo": "langgenius/dify",
+      "url": "https://github.com/langgenius/dify",
+      "language": ["Python", "TypeScript"],
+      "community_activity": "非常活跃，包含工作流、Agent、RAG、模型管理和观测能力",
+      "scores": {
+        "tag_match": 9,
+        "engineering_completeness": 10,
+        "reusability": 9,
+        "community_activity": 10,
+        "modification_cost": "中"
+      },
+      "why_usable": "A15 需要一个可以快速搭出原型的前后端平台，Dify 直接覆盖可视化工作流、RAG 管道、Agent 能力、模型管理和可观测性，适合做系统外壳和演示原型。",
+      "reusable_parts": [
+        "可视化 workflow 画布",
+        "Agent 能力和工具配置",
+        "RAG 管道和知识库",
+        "模型管理与观测"
+      ],
+      "needs_changes": [
+        "需要把通用 LLM 工作流改成电厂监盘专用流程",
+        "需要接入时序数据和告警数据源",
+        "需要增加故障诊断、历史预警统计和追溯页面"
+      ],
+      "how_to_embed": "适合作为 A15 的主应用壳层，用它承接前端交互、工作流编排和知识库，再把电厂监盘专用节点接进去。"
+    },
+    {
+      "rank": 3,
+      "repo": "infiniflow/ragflow",
+      "url": "https://github.com/infiniflow/ragflow",
+      "language": ["Python", "Go", "TypeScript"],
+      "community_activity": "活跃，重点在深度文档理解、RAG、知识库和 Agent 编排",
+      "scores": {
+        "tag_match": 9,
+        "engineering_completeness": 9,
+        "reusability": 9,
+        "community_activity": 9,
+        "modification_cost": "中"
+      },
+      "why_usable": "A15 里的知识库推理、标准化操作指导、问答与追溯非常依赖文档解析和 RAG，RAGFlow 在 PDF/DOCX/HTML 摄入、分块、检索和 Agent 方面都很强。",
+      "reusable_parts": [
+        "文档解析与深度切分",
+        "知识库检索与问答",
+        "Agent 与多步推理",
+        "前端知识库/流程界面"
+      ],
+      "needs_changes": [
+        "需要把通用知识库换成电厂规程、案例和处置手册",
+        "需要增加监盘场景的实时数据接口",
+        "需要与预警统计和操作日志打通"
+      ],
+      "how_to_embed": "适合作为 A15 的知识库和故障指导模块底座，尤其适合把运行规程、故障案例和标准操作流程做成可检索知识源。"
+    },
+    {
+      "rank": 4,
+      "repo": "grafana/grafana",
+      "url": "https://github.com/grafana/grafana",
+      "language": ["Go", "TypeScript"],
+      "community_activity": "非常活跃，强项是仪表盘、告警、数据源和时序可视化",
+      "scores": {
+        "tag_match": 9,
+        "engineering_completeness": 10,
+        "reusability": 10,
+        "community_activity": 10,
+        "modification_cost": "低"
+      },
+      "why_usable": "A15 明确要求趋势曲线、历史预警统计、告警提示区和日志追溯区，Grafana 在时序展示、告警管理和数据源接入上是最成熟的参考底座。",
+      "reusable_parts": [
+        "时序仪表盘和 Explore",
+        "Alerting / Alertmanager",
+        "数据源插件体系",
+        "dashboard JSON / API 生态"
+      ],
+      "needs_changes": [
+        "需要接入电厂实时数据接口",
+        "需要把告警语义改成监盘预警而不是通用指标告警",
+        "需要补充 Agent 驱动的查询和诊断入口"
+      ],
+      "how_to_embed": "适合作为 A15 的可视化和告警层，把实时曲线、历史告警、阈值预警和统计报表全部落到 Grafana 面板里。"
+    },
+    {
+      "rank": 5,
+      "repo": "unit8co/darts",
+      "url": "https://github.com/unit8co/darts",
+      "language": ["Python"],
+      "community_activity": "活跃，专注时序预测和异常检测",
+      "scores": {
+        "tag_match": 8,
+        "engineering_completeness": 9,
+        "reusability": 9,
+        "community_activity": 9,
+        "modification_cost": "中"
+      },
+      "why_usable": "A15 要求工况变化识别、时序建模和模型自适应迭代，Darts 同时提供 forecasting 和 anomaly detection，能直接承担趋势预测与异常检测内核。",
+      "reusable_parts": [
+        "Forecasting 模型",
+        "Anomaly detection / scorers / detectors",
+        "多变量时序支持",
+        "预测结果可视化与评估"
+      ],
+      "needs_changes": [
+        "需要接入电厂运行数据并定制特征",
+        "需要把预测结果输出给预警研判模块",
+        "需要结合业务规则做阈值和告警联动"
+      ],
+      "how_to_embed": "适合作为 A15 的时序预测与异常检测模块，负责工况变化识别、趋势预测和异常打分。"
+    }
+  ],
+  "selection_summary": {
+    "recommended_core_set": [
+      "langchain-ai/langgraph",
+      "langgenius/dify",
+      "infiniflow/ragflow",
+      "grafana/grafana",
+      "unit8co/darts"
+    ],
+    "recommended_role_mapping": {
+      "agent_orchestration": "langchain-ai/langgraph",
+      "application_shell": "langgenius/dify",
+      "knowledge_base_and_rag": "infiniflow/ragflow",
+      "dashboard_and_alerting": "grafana/grafana",
+      "time_series_and_anomaly_detection": "unit8co/darts"
+    },
+    "not_selected_as_primary": [],
+    "integration_strategy": "建议把 LangGraph 作为调度内核，Dify 或 RAGFlow 作为工作流与知识库外壳，Grafana 负责告警与可视化，Darts 负责时序预测与异常检测；最后把电厂数据源、日志和故障手册接进统一 Agent 流程，形成 A15 的端到端原型。"
+  }
+}
