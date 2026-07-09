@@ -79,9 +79,8 @@ Agent自动完成：
   
 ### 6.模型自适应优化
 
-  针对实际的工况变化复杂或原有模型失效的问题，智能体能自
-主感知工况变化，选取相关运行数据，调用时序建模算法，自动完成模型修正与
-迭代优化
+  支持基于不同工况（高负荷/低负荷）的模型切换与离线更新，
+为后续在线自适应优化提供基础能力。
 
 ## 系统架构
 
@@ -255,6 +254,30 @@ cd frontend
 npm install
 npm run dev
 
+
+##  Quick Start
+
+### 1. 启动数据库
+
+docker-compose up -d postgres
+
+### 2. 初始化数据
+
+python scripts/init_db.py
+
+### 3. 启动后端
+
+cd backend
+python main.py
+
+### 4. 启动前端
+
+cd frontend
+npm run dev
+
+### 5. 访问
+
+http://localhost:5173
 
 ## Demo Scenario
 
