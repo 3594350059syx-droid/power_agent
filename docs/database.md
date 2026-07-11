@@ -19,7 +19,7 @@
 
 ## 业务数据库
 
-MySQL
+PostgreSQL
 
 用途：
 
@@ -32,7 +32,7 @@ MySQL
 
 ## 时序数据库
 
-InfluxDB（可选）
+TimescaleDB（基于 PostgreSQL 扩展）
 
 用途：
 
@@ -43,6 +43,17 @@ InfluxDB（可选）
 - 电气参数
 
 等连续变化数据。
+
+利用 TimescaleDB 的超表（Hypertable）特性实现自动分区和高效时序查询。
+
+## 向量数据库
+
+FAISS（Demo阶段）/ Milvus（扩展）
+
+用途：
+
+- 故障知识库向量存储
+- RAG 检索
 
 
 
@@ -61,14 +72,14 @@ InfluxDB（可选）
 
 字段：
 
-|字段|类型|说明|
-|-|-|-|
-|id|int|设备ID|
-|device_name|string|设备名称|
-|device_type|string|设备类型|
-|location|string|设备位置|
-|status|string|运行状态|
-|create_time|datetime|创建时间|
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | SERIAL PRIMARY KEY | 设备ID |
+| device_name | VARCHAR(100) | 设备名称 |
+| device_type | VARCHAR(50) | 设备类型 |
+| location | VARCHAR(200) | 设备位置 |
+| status | VARCHAR(20) | 运行状态 |
+| create_time | TIMESTAMP DEFAULT NOW() | 创建时间 |
 
 
 
@@ -80,55 +91,51 @@ InfluxDB（可选）
 
 ---
 
-## 3.2 设备运行数据表 device_data
-
+## 3.2 设备运行数据表 device_data（TimescaleDB 超表）
 
 用途：
 
-存储设备实时运行参数。
-
+存储设备实时运行参数，使用 TimescaleDB Hypertable。
 
 字段：
 
-|字段|类型|说明|
-|-|-|-|
-|id|int|数据ID|
-|device_id|int|设备ID|
-|temperature|float|温度|
-|pressure|float|压力|
-|speed|float|转速|
-|value_time|datetime|采集时间|
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | BIGSERIAL | 数据ID |
+| device_id | INTEGER REFERENCES device(id) | 设备ID |
+| temperature | DOUBLE PRECISION | 温度 |
+| pressure | DOUBLE PRECISION | 压力 |
+| speed | DOUBLE PRECISION | 转速 |
+| value_time | TIMESTAMPTZ NOT NULL | 采集时间 |
 
+超表创建：
 
+SELECT create_hypertable('device_data', 'value_time');
 
 数据来源：
 
-传感器 / 模拟数据
-
+传感器 / 模拟数据 / MQTT 实时推送
 
 
 ---
 
-## 3.3 告警信息表 alarm
 
+## 3.3 告警信息表 alarm
 
 用途：
 
 保存异常检测产生的告警。
 
-
 字段：
 
-|字段|类型|说明|
-|-|-|-|
-|id|int|告警ID|
-|device_id|int|设备ID|
-|level|string|告警等级|
-|message|string|告警内容|
-|alarm_time|datetime|时间|
-|status|string|处理状态|
-
-
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | SERIAL PRIMARY KEY | 告警ID |
+| device_id | INTEGER REFERENCES device(id) | 设备ID |
+| level | VARCHAR(10) | 告警等级 |
+| message | TEXT | 告警内容 |
+| alarm_time | TIMESTAMPTZ DEFAULT NOW() | 时间 |
+| status | VARCHAR(20) DEFAULT 'pending' | 处理状态 |
 
 告警等级：
 
@@ -137,122 +144,106 @@ InfluxDB（可选）
 - HIGH
 
 
-
 ---
 
-## 3.4 故障诊断结果表 diagnosis
 
+## 3.4 故障诊断结果表 diagnosis
 
 用途：
 
 保存 Agent 分析结果。
 
-
 字段：
 
-|字段|类型|说明|
-|-|-|-|
-|id|int|结果ID|
-|alarm_id|int|关联告警|
-|fault_type|string|故障类型|
-|reason|string|原因分析|
-|suggestion|string|处理建议|
-|create_time|datetime|生成时间|
-
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | SERIAL PRIMARY KEY | 结果ID |
+| alarm_id | INTEGER REFERENCES alarm(id) | 关联告警 |
+| fault_type | VARCHAR(100) | 故障类型 |
+| reason | TEXT | 原因分析 |
+| suggestion | TEXT | 处理建议 |
+| create_time | TIMESTAMPTZ DEFAULT NOW() | 生成时间 |
 
 
 ---
 
-## 3.5 Agent任务记录表 agent_task
 
+## 3.5 Agent任务记录表 agent_task
 
 用途：
 
 记录智能体执行过程。
 
-
 字段：
 
-|字段|类型|说明|
-|-|-|-|
-|id|int|任务ID|
-|task_type|string|任务类型|
-|input|string|输入内容|
-|output|string|输出结果|
-|status|string|执行状态|
-|create_time|datetime|时间|
-
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | SERIAL PRIMARY KEY | 任务ID |
+| task_type | VARCHAR(50) | 任务类型 |
+| input | TEXT | 输入内容 |
+| output | TEXT | 输出结果 |
+| status | VARCHAR(20) | 执行状态 |
+| create_time | TIMESTAMPTZ DEFAULT NOW() | 时间 |
 
 
 ---
+
+
 # 4. 数据关系
 
+device (设备)
+|
+|
+device_data (运行数据)
+|
+|
+alarm (告警)
+|
+|
+diagnosis (诊断结果)
 
-
-设备(device)
-
-  |
-  |
-
-运行数据(device_data)
-
-  |
-  |
-
-告警(alarm)
-
-  |
-  |
-
-诊断结果(diagnosis)
-
-设备
-
-  |
-  |
-
-Agent任务(agent_task)
-
+device
+|
+|
+agent_task (Agent任务)
 
 
 ---
+
 
 # 5. 数据流
 
+传感器 / MQTT
 
+↓
 
-传感器数据
+device_data (TimescaleDB超表)
 
-  ↓
-
-device_data
-
-  ↓
+↓
 
 异常检测模型
 
-  ↓
+↓
 
 alarm
 
-  ↓
+↓
 
-Agent诊断
+Agent诊断 + FAISS 知识检索
 
-  ↓
+↓
 
 diagnosis
 
-  ↓
+↓
 
 前端展示
 
 
-
 ---
 
-# 6. 后续扩展
 
+# 6. 后续扩展
 
 未来可以增加：
 
@@ -261,3 +252,4 @@ diagnosis
 - 知识库表
 - 维修记录表
 - 历史案例库
+- Milvus 向量库迁移
