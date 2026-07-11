@@ -8,13 +8,13 @@
 
   %% ========== 用户层 ==========
   U[用户 / 运维人员]
-  F[前端系统 Frontend<br/>Vue/React]
+  F[前端系统 Frontend<br/>Vue3 + Element Plus]
 
   %% ========== 接口层 ==========
   API[API网关 / 后端服务<br/>FastAPI]
 
   %% ========== Agent层 ==========
-  A1[调度Agent]
+  A1[调度Agent<br/>LangGraph]
   A2[诊断Agent]
   A3[报告生成Agent]
 
@@ -23,11 +23,11 @@
   M2[故障分类模型<br/>MLP/规则]
 
   %% ========== 数据层 ==========
-  DB1[(时序数据库<br/>InfluxDB)]
-  DB2[(业务数据库<br/>MySQL)]
+  DB1[(时序数据库<br/>TimescaleDB)]
+  DB2[(业务数据库<br/>PostgreSQL)]
 
   %% ========== 数据源 ==========
-  DS[传感器/历史数据]
+  DS[传感器/MQTT/历史数据]
 
   %% ========== 连接关系 ==========
   U --> F
@@ -243,7 +243,11 @@
 
   ## 技术选型：
   后端：FastAPI
-  模型：PyTorch
-  数据库：MySQL / InfluxDB
-  Agent：基于 LLM（如 DeepSeek / OpenAI）
+  Agent：LangChain / LangGraph
+  LLM：DeepSeek API / ChatGLM
+  数据库：PostgreSQL + TimescaleDB
+  向量数据库：FAISS（Demo阶段）/ Milvus（扩展）
+  前端：Vue3 + Element Plus
+  数据接入：MQTT / WebSocket
+  部署：Docker Compose
      
