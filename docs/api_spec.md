@@ -223,3 +223,10 @@ xxx
 |-|-|-|-|
 | | | | |
 
+| 接口 | Method | URL | 功能 | 负责人 | 状态 |
+|------|--------|-----|------|--------|------|
+| 健康检查 | GET | `/api/v1/health` | 服务存活检测 | A | ✅ 已完成 |
+| Agent 对话 | POST | `/api/v1/agent/chat` | 用户自然语言输入 → Agent 返回诊断结果 | A | 🔨 Week 2 |
+| 实时遥测 | GET | `/api/v1/telemetry/live` | 获取设备实时参数 | A（封装 B 的 data_tool） | ⏳ Week 3 |
+| 告警列表 | GET | `/api/v1/alarm/list` | 查询告警记录 | A（封装 B 的 alarm_tool） | ⏳ Week 3 |
+| 诊断报告 | GET | `/api/v1/report/latest` | 获取最新诊断报告 | A | ⏳ Week 5 |
