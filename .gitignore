@@ -27,5 +27,6 @@ models/checkpoints/*.pt
 # Data
 data/database/*.db
 
-#qoder
+#Qoder
 .qoder/
+
