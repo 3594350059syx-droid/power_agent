@@ -1,1 +1,3 @@
--- Database initialization script
+-- P0-1 (Week 2): 数据库建表脚本
+-- 依赖：PostgreSQL 15+ + TimescaleDB 扩展
+-- 当前阶段：占位，B 设计表结构后填充完整建表语句
