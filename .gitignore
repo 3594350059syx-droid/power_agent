@@ -1,28 +1,36 @@
-# Python
+# Python 编译缓存、打包产物
 __pycache__/
 *.py[cod]
 *.egg-info/
 dist/
 build/
 
-# Virtual Environment
+# Python 虚拟环境
 .venv/
 venv/
 
-# IDE
+# Node 前端补充（你的frontend必须加，防止上传node_modules）
+node_modules/
+dist/
+
+# IDE 配置文件夹
 .idea/
 .vscode/
 
-# Environment
+# 环境变量密钥文件
 .env
 
-# OS
+# 系统隐藏垃圾文件
 .DS_Store
 Thumbs.db
 
-# Models
+# 模型权重文件（体积大，不上传仓库）
 models/checkpoints/*.pth
 models/checkpoints/*.pt
 
-# Data
+# 本地数据库文件
 data/database/*.db
+
+# 前端日志、打包缓存
+npm-debug.log
+yarn-error.log
