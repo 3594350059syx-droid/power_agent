@@ -31,6 +31,6 @@ models/checkpoints/*.pt
 # 本地数据库文件
 data/database/*.db
 
-# 前端日志、打包缓存
-npm-debug.log
-yarn-error.log
+#Qoder
+.qoder/
+
