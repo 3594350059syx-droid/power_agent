@@ -15,7 +15,29 @@ python-dotenv>=1.0.0
 # langgraph>=0.0.40
 # openai>=1.10.0
 
-# RAG (后续启用)
-# faiss-cpu>=1.7.4
-# sentence-transformers>=2.3.0
-# Add project dependencies here
+# =========================
+# RAG
+# =========================
+
+# Vector Database
+faiss-cpu>=1.8.0
+
+# Embedding Model
+sentence-transformers>=3.0.0
+
+# Text Splitting & Document Processing
+langchain>=0.3.0
+langchain-community>=0.3.0
+langchain-text-splitters>=0.3.0
+
+# HuggingFace Models
+transformers>=4.45.0
+
+# Deep Learning Backend
+torch>=2.4.0
+
+# Numerical Computing
+numpy>=1.26.0
+
+# Progress Bar
+tqdm>=4.66.0
