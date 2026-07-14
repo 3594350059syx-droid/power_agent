@@ -172,4 +172,7 @@ data/mock/output/*.csv
 # OS
 .DS_Store
 Thumbs.db
+
+#Qoder
+.qoder
 ```
