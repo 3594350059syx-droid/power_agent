@@ -75,6 +75,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # ---------- 路由注册 ----------
 app.include_router(health_router, prefix=settings.API_V1_PREFIX)
 
+from backend.api.telemetry import router as telemetry_router
+app.include_router(telemetry_router, prefix=settings.API_V1_PREFIX)
+
 # 后续模块在此追加：
 # from backend.api.agent import router as agent_router
 # app.include_router(agent_router, prefix=settings.API_V1_PREFIX)
