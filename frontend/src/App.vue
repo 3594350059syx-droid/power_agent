@@ -1,19 +1,14 @@
 <template>
-  <el-container style="height: 100vh;">
-    <el-aside width="200px" style="background-color: rgb(238, 241, 246);">
-      <el-menu router>
-      </el-menu>
-    </el-aside>
-    <el-main>
-      <router-view />
-    </el-main>
-  </el-container>
+  <router-view />
 </template>
 
-<script setup>
-</script>
-
 <style>
-margin: 0;
-padding: 0;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+html, body, #app {
+  height: 100%;
+}
 </style>
