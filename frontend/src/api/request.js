@@ -12,16 +12,6 @@ service.interceptors.request.use(config => {
 
 service.interceptors.response.use(
   res => {
-    if (import.meta.env.VITE_USE_MOCK === 'true') {
-    const mockData = {
-        success: true,
-        message: '操作成功',
-        data: {
-            "dialogue": "这里是模拟的对话内容"
-        }
-    }
-    return mockData
-}
     const { success, message, data } = res.data
     if (!success) {
       ElMessage.error(message || '请求失败')
@@ -30,7 +20,10 @@ service.interceptors.response.use(
     return data
   },
   err => {
-    ElMessage.error('后端服务异常，请检查localhost:8080')
+    const msg = err?.response?.status
+      ? `请求失败 (${err.response.status})`
+      : '后端服务未启动，请检查 localhost:8000'
+    ElMessage.error(msg)
     return Promise.reject(err)
   }
 )
