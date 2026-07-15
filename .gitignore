@@ -27,6 +27,9 @@ models/checkpoints/*.pt
 # Data
 data/database/*.db
 
+# RAG index (runtime artifacts)
+rag/retriever/index/
+
 #Qoder
 .qoder/
 
