@@ -1,14 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import MainLayout from '@/layouts/MainLayout.vue'
+import Layout from '@/components/Layout.vue'
 
 const routes = [
   {
     path: '/',
-    component: MainLayout,
+    component: Layout,
     children: [
       {
         path: '',
-        redirect: '/monitor'   // ✅ 默认跳转 monitor
+        redirect: '/monitor'
       },
       {
         path: '/monitor',
