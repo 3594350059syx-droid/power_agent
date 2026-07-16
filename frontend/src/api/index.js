@@ -12,25 +12,30 @@ service.interceptors.request.use(config => {
 
 service.interceptors.response.use(
   res => {
+    // Mock 模式
     if (import.meta.env.VITE_USE_MOCK === 'true') {
-    const mockData = {
+      const mockData = {
         success: true,
         message: '操作成功',
         data: {
-            "dialogue": "这里是模拟的对话内容"
+          reply: '这里是模拟的对话内容'
         }
+      }
+      return mockData
     }
-    return mockData
-}
-    const { success, message, data } = res.data
-    if (!success) {
-      ElMessage.error(message || '请求失败')
-      return Promise.reject(res.data)
+
+    // 真实后端响应
+    const response = res.data
+    // 后端返回格式：{ success: true, message: 'ok', data: { reply: '...' } }
+    if (response.success === true) {
+      return response  // 直接返回完整响应
+    } else {
+      ElMessage.error(response.message || '请求失败')
+      return Promise.reject(response)
     }
-    return data
   },
   err => {
-    ElMessage.error('后端服务异常，请检查localhost:8080')
+    ElMessage.error('后端服务异常，请检查 localhost:8000')
     return Promise.reject(err)
   }
 )
