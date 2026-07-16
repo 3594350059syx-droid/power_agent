@@ -1,35 +1,90 @@
-# Python
+# ====================
+# Python（后端）
+# ====================
 __pycache__/
 *.py[cod]
-*.egg-info/
-dist/
-build/
-
-# Virtual Environment
-.venv/
+*.pyc
+*.pyd
+*.pyo
+*.so
+.Python
+env/
 venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+*.pkl
+*.faiss
 
-# IDE
-.idea/
-.vscode/
+# ====================
+# Node（前端）
+# ====================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+dist/
+dist-ssr/
+*.local
+.vite/
 
-# Environment
+# ====================
+# 环境变量
+# ====================
 .env
+.env.local
+.env.*.local
+.env.production
 
-# OS
+# ====================
+# IDE
+# ====================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 .DS_Store
 Thumbs.db
 
-# Models
-models/checkpoints/*.pth
-models/checkpoints/*.pt
-
-# Data
+# ====================
+# 数据文件
+# ====================
+data/
+*.pkl
+*.faiss
+*.csv
+*.xlsx
+*.db
 data/database/*.db
 
+# ====================
+# 模型文件
+# ====================
+models/checkpoints/*.pt
+*.pt
+*.pth
+
+# ====================
+# 输出目录
+# ====================
+output/
+docs/_build/
 # RAG index (runtime artifacts)
 rag/retriever/index/
 
 #Qoder
 .qoder/
 
+# ====================
+# Qoder
+# ====================
+.qoder/
