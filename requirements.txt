@@ -15,7 +15,9 @@ python-dotenv>=1.0.0
 # langgraph>=0.0.40
 # openai>=1.10.0
 
-# RAG (后续启用)
-# faiss-cpu>=1.7.4
-# sentence-transformers>=2.3.0
+# RAG
+faiss-cpu>=1.7.4
+sentence-transformers>=2.3.0
+langchain-text-splitters>=0.3.0
+numpy>=1.24.0
 # Add project dependencies here

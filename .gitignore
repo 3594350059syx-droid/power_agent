@@ -80,6 +80,19 @@ output/
 docs/_build/
 
 # ====================
+
+# ====================
+# 输出目录
+# ====================
+output/
+docs/_build/
+# RAG index (runtime artifacts)
+rag/retriever/index/
+
+#Qoder
+.qoder/
+
+# ====================
 # Qoder
 # ====================
 .qoder/
