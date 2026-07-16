@@ -78,6 +78,11 @@ models/checkpoints/*.pt
 # ====================
 output/
 docs/_build/
+# RAG index (runtime artifacts)
+rag/retriever/index/
+
+#Qoder
+.qoder/
 
 # ====================
 # Qoder
