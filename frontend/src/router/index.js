@@ -1,14 +1,28 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import Layout from '@/components/Layout.vue'
 
 const routes = [
   {
     path: '/',
-    redirect: '/monitor'
-  },
-  {
-    path: '/monitor',
-    name: 'Monitor',
-    component: () => import('@/views/Monitor.vue')
+    component: Layout,
+    children: [
+      {
+        path: '',
+        redirect: '/monitor'
+      },
+      {
+        path: '/monitor',
+        name: 'Monitor',
+        component: () => import('@/views/Monitor.vue'),
+        meta: { title: '监控面板' }
+      },
+      {
+        path: '/chat',
+        name: 'Chat',
+        component: () => import('@/views/Chat.vue'),
+        meta: { title: 'AI雺能对话' }
+      }
+    ]
   }
 ]
 
