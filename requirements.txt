@@ -1,14 +1,11 @@
-# Web Framework
 fastapi>=0.110.0
 uvicorn[standard]>=0.27.0
 
-# Environment
 python-dotenv>=1.0.0
 
-# Database (后续启用)
-# sqlalchemy>=2.0.0
-# asyncpg>=0.29.0
-# psycopg2-binary>=2.9.0
+psycopg2-binary>=2.9.0
+sqlalchemy>=2.0.0
+asyncpg>=0.29.0
 
 # Agent (后续启用)
 # langchain>=0.1.0
@@ -18,4 +15,3 @@ python-dotenv>=1.0.0
 # RAG (后续启用)
 # faiss-cpu>=1.7.4
 # sentence-transformers>=2.3.0
-# Add project dependencies here
