@@ -12,23 +12,27 @@ service.interceptors.request.use(config => {
 
 service.interceptors.response.use(
   res => {
-    // Mock 模式
+    const response = res.data
+
+    // Mock 模式：只对 chat 接口生效
     if (import.meta.env.VITE_USE_MOCK === 'true') {
-      const mockData = {
-        success: true,
-        message: '操作成功',
-        data: {
-          reply: '这里是模拟的对话内容'
+      const url = res.config.url || ''
+      if (url.includes('/agent/chat')) {
+        return {
+          success: true,
+          message: 'mock',
+          data: {
+            reply: '【Mock 模式】已收到您的问题，请配置真实 DeepSeek API Key'
+          }
         }
       }
-      return mockData
+      // 其他接口（telemetry / alarm / report）正常返回，不污染
+      return response
     }
 
     // 真实后端响应
-    const response = res.data
-    // 后端返回格式：{ success: true, message: 'ok', data: { reply: '...' } }
     if (response.success === true) {
-      return response  // 直接返回完整响应
+      return response
     } else {
       ElMessage.error(response.message || '请求失败')
       return Promise.reject(response)
