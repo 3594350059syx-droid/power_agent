@@ -20,7 +20,7 @@ const routes = [
         path: '/chat',
         name: 'Chat',
         component: () => import('@/views/Chat.vue'),
-        meta: { title: 'AI雺能对话' }
+        meta: { title: 'AI智能对话' }
       }
     ]
   }

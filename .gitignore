@@ -81,8 +81,17 @@ docs/_build/
 # RAG index (runtime artifacts)
 rag/retriever/index/
 
-#Qoder
-.qoder/
+# ====================
+# 模型文件
+# ===========models/checkpoints/*.pt
+*.pt
+*.pth
+
+# ====================
+# 输出目录
+# ====================
+output/
+docs/_build/
 
 # ====================
 # Qoder

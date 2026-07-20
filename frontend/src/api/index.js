@@ -1,6 +1,47 @@
-// Axios 实例 + 拦截器（统一入口，与 request.js 一致）
-// P0-1 (Week 1): 前端 API 层基座
-// 前置条件：无
-// 当前阶段：完成，后续 API 模块均从此导入
+import axios from 'axios'
+import { ElMessage } from 'element-plus'
 
-export { default } from './request'
+const service = axios.create({
+  baseURL: '/api/v1',
+  timeout: 10000
+})
+
+service.interceptors.request.use(config => {
+  return config
+})
+
+service.interceptors.response.use(
+  res => {
+    const response = res.data
+
+    // Mock 模式：只对 chat 接口生效
+    if (import.meta.env.VITE_USE_MOCK === 'true') {
+      const url = res.config.url || ''
+      if (url.includes('/agent/chat')) {
+        return {
+          success: true,
+          message: 'mock',
+          data: {
+            reply: '【Mock 模式】已收到您的问题，请配置真实 DeepSeek API Key'
+          }
+        }
+      }
+      // 其他接口（telemetry / alarm / report）正常返回，不污染
+      return response
+    }
+
+    // 真实后端响应
+    if (response.success === true) {
+      return response
+    } else {
+      ElMessage.error(response.message || '请求失败')
+      return Promise.reject(response)
+    }
+  },
+  err => {
+    ElMessage.error('后端服务异常，请检查 localhost:8000')
+    return Promise.reject(err)
+  }
+)
+
+export default service

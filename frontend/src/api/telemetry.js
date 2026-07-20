@@ -1,7 +1,1 @@
-import request from './request'
-
-export function getLiveTelemetry(device_id = 'dev_001') {
-  return request.get('/telemetry/live', {
-    params: { device_id }
-  })
-}
+// 数据查询 API（P02 开发）

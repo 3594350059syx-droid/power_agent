@@ -1,9 +1,16 @@
-// P0-2 (Week 2): POST /api/v1/agent/chat — Agent 对话 API 封装
-// 前置条件：A 的后端 /api/v1/agent/chat 接口已提供（至少 mock）
-// 当前阶段：空壳，联调时补充实现
+// Agent 对话 API
+import request from '@/api/index'
 
-import request from './request'
-
-// export function agentChat(message, mode = 'chat') {
-//   return request.post('/agent/chat', { message, mode })
-// }
+/**
+ * AI 对话接口
+ * @param {string} message - 用户输入的消息
+ * @param {string} mode - 对话模式: chat / diagnose / predict
+ * @returns {Promise}
+ */
+export function sendChatMessage(message, mode = 'chat') {
+  return request({
+    url: '/agent/chat',
+    method: 'post',
+    data: { message , mode }
+  })
+}
