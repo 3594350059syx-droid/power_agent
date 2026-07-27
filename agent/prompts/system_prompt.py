@@ -1,9 +1,16 @@
 """
 Agent 系统提示词
-P0-2: 基础版本，P0-3 将接入 DeepSeek LLM 使用此提示词
+P0-2: 基础版本（关键词规则匹配）
+P0-3: 接入 DeepSeek LLM 意图识别 + 参数抽取，规则匹配作为降级
 
 定义 Agent 的角色定位、可用 Tool 列表、参数抽取模板。
 """
+import json
+import logging
+import re
+
+logger = logging.getLogger(__name__)
+
 from agent.tools.base import INTENT_TOOL_MAP
 
 
@@ -43,6 +50,7 @@ PARAM_EXTRACTION_TEMPLATE = """\
 - device_id: 设备 ID（如 generator_002 / turbine_003 / generator_004）
 - parameter: 参数名（如 steam_temp / steam_pressure / vibration / power）
 - time_range_hours: 时间范围（小时，默认 24）
+- threshold: 阈值（用户提到的数值阈值，如 550、80 等，无则不填）
 
 参数名映射表：
   主蒸汽温度 → steam_temp
@@ -56,8 +64,11 @@ PARAM_EXTRACTION_TEMPLATE = """\
 
 设备名映射表：
   2号锅炉   → generator_002
+  2号机组   → generator_002
   3号汽轮机 → turbine_003
+  3号机组   → turbine_003
   4号发电机 → generator_004
+  4号机组   → generator_004
 
 请以 JSON 格式返回意图和参数：
 {
@@ -65,7 +76,8 @@ PARAM_EXTRACTION_TEMPLATE = """\
   "params": {
     "device_id": "...",
     "parameter": "...",
-    "time_range_hours": 24
+    "time_range_hours": 24,
+    "threshold": null
   }
 }
 """
@@ -169,3 +181,97 @@ def extract_params(message: str) -> dict:
         params["time_range_hours"] = 24  # 默认 24 小时
 
     return params
+
+
+# ============================================================
+# P0-3: LLM 意图识别 + 参数抽取
+# ============================================================
+
+# 合法意图集合
+_VALID_INTENTS = {"data_query", "anomaly_detection", "prediction", "diagnosis", "chat"}
+
+
+def parse_llm_response(response_text: str) -> tuple[str, dict]:
+    """
+    解析 LLM 返回的 JSON 文本，提取 intent 和 params。
+
+    LLM 可能返回纯 JSON、带 markdown 代码块或附带额外说明，
+    本函数使用正则提取 JSON 部分，容错性高。
+
+    Returns:
+        (intent, params)
+    """
+    # 尝试直接解析
+    text = response_text.strip()
+
+    # 去除 markdown 代码块包裹
+    text = re.sub(r"^```(?:json)?\s*", "", text)
+    text = re.sub(r"\s*```$", "", text)
+
+    # 尝试提取 JSON 对象（包含 "intent" 字段）
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        # 正则匹配包含 intent 的 JSON 对象
+        match = re.search(r'\{[^{}]*"intent"[^{}]*\}', response_text, re.DOTALL)
+        if not match:
+            logger.warning(f"LLM 响应无法解析为 JSON: {response_text[:200]}")
+            return "chat", {}
+        try:
+            data = json.loads(match.group())
+        except json.JSONDecodeError:
+            logger.warning(f"LLM 响应 JSON 解析失败: {match.group()[:200]}")
+            return "chat", {}
+
+    intent = data.get("intent", "chat")
+    params = data.get("params", {})
+
+    # 校验意图合法性
+    if intent not in _VALID_INTENTS:
+        logger.warning(f"LLM 返回未知意图 '{intent}'，降级为 chat")
+        intent = "chat"
+
+    # 确保 params 是 dict
+    if not isinstance(params, dict):
+        params = {}
+
+    # 默认 time_range_hours
+    if "time_range_hours" not in params:
+        params["time_range_hours"] = 24
+
+    return intent, params
+
+
+def parse_intent_and_params(message: str) -> tuple[str, dict]:
+    """
+    P0-3 统一入口: 意图识别 + 参数抽取
+
+    优先使用 DeepSeek LLM（通过 langchain-openai 或 urllib），
+    失败时降级为 P0-2 规则匹配（classify_intent + extract_params）。
+
+    降级场景:
+    1. DEEPSEEK_API_KEY 未配置 → 规则匹配
+    2. API 调用网络错误 → 规则匹配
+    3. LLM 返回无法解析 → 规则匹配
+
+    Returns:
+        (intent, params)
+    """
+    from agent.prompts.llm_client import is_llm_available, call_deepseek
+    from agent.prompts.intent_examples import build_messages
+
+    if is_llm_available():
+        try:
+            messages = build_messages(message)
+            response = call_deepseek(messages, temperature=0.1, max_tokens=512)
+            intent, params = parse_llm_response(response)
+            logger.info(f"[LLM] 意图识别成功: intent={intent}, params={params}")
+            return intent, params
+        except Exception as e:
+            logger.warning(f"[LLM] 意图识别失败，降级为规则匹配: {e}")
+
+    # 降级: P0-2 规则匹配
+    intent = classify_intent(message)
+    params = extract_params(message)
+    logger.info(f"[规则] 意图识别: intent={intent}, params={params}")
+    return intent, params

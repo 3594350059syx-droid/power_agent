@@ -1,0 +1,100 @@
+{
+  "mode": "llm",
+  "total": 10,
+  "passed": 10,
+  "failed": 0,
+  "pass_rate": "100%",
+  "acceptance": "PASS",
+  "details": [
+    {
+      "id": 1,
+      "message": "分析2号机组过去24小时主蒸汽温度异常",
+      "expected_intent": "anomaly_detection",
+      "actual_intent": "anomaly_detection",
+      "intent_ok": true,
+      "params_ok": true,
+      "passed": true
+    },
+    {
+      "id": 2,
+      "message": "查看4号发电机过去48小时的功率数据",
+      "expected_intent": "data_query",
+      "actual_intent": "data_query",
+      "intent_ok": true,
+      "params_ok": true,
+      "passed": true
+    },
+    {
+      "id": 3,
+      "message": "预测2号锅炉未来6小时主蒸汽温度趋势",
+      "expected_intent": "prediction",
+      "actual_intent": "prediction",
+      "intent_ok": true,
+      "params_ok": true,
+      "passed": true
+    },
+    {
+      "id": 4,
+      "message": "为什么3号汽轮机振动持续偏高，怎么处理",
+      "expected_intent": "diagnosis",
+      "actual_intent": "diagnosis",
+      "intent_ok": true,
+      "params_ok": true,
+      "passed": true
+    },
+    {
+      "id": 5,
+      "message": "你好，你是谁",
+      "expected_intent": "chat",
+      "actual_intent": "chat",
+      "intent_ok": true,
+      "params_ok": true,
+      "passed": true
+    },
+    {
+      "id": 6,
+      "message": "2号锅炉炉膛温度最近12小时有异常，请给出处理建议",
+      "expected_intent": "diagnosis",
+      "actual_intent": "diagnosis",
+      "intent_ok": true,
+      "params_ok": true,
+      "passed": true
+    },
+    {
+      "id": 7,
+      "message": "显示3号汽轮机的当前转速",
+      "expected_intent": "data_query",
+      "actual_intent": "data_query",
+      "intent_ok": true,
+      "params_ok": true,
+      "passed": true
+    },
+    {
+      "id": 8,
+      "message": "2号锅炉主蒸汽温度超过550度，请分析",
+      "expected_intent": "anomaly_detection",
+      "actual_intent": "anomaly_detection",
+      "intent_ok": true,
+      "params_ok": true,
+      "passed": true
+    },
+    {
+      "id": 9,
+      "message": "4号发电机定子温度一周的变化趋势",
+      "expected_intent": "data_query",
+      "actual_intent": "data_query",
+      "intent_ok": true,
+      "params_ok": true,
+      "passed": true
+    },
+    {
+      "id": 10,
+      "message": "诊断2号锅炉故障原因并生成报告",
+      "expected_intent": "diagnosis",
+      "actual_intent": "diagnosis",
+      "intent_ok": true,
+      "params_ok": true,
+      "passed": true
+    }
+  ]
+}
