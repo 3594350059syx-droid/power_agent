@@ -1,0 +1,108 @@
+[
+  {
+    "id": 1,
+    "message": "分析2号机组过去24小时主蒸汽温度异常",
+    "expected_intent": "anomaly_detection",
+    "expected_params": {
+      "device_id": "generator_002",
+      "parameter": "steam_temp",
+      "time_range_hours": 24
+    },
+    "note": "标准异常检测场景"
+  },
+  {
+    "id": 2,
+    "message": "查看4号发电机过去48小时的功率数据",
+    "expected_intent": "data_query",
+    "expected_params": {
+      "device_id": "generator_004",
+      "parameter": "power",
+      "time_range_hours": 48
+    },
+    "note": "标准数据查询"
+  },
+  {
+    "id": 3,
+    "message": "预测2号锅炉未来6小时主蒸汽温度趋势",
+    "expected_intent": "prediction",
+    "expected_params": {
+      "device_id": "generator_002",
+      "parameter": "steam_temp",
+      "time_range_hours": 6
+    },
+    "note": "标准趋势预测"
+  },
+  {
+    "id": 4,
+    "message": "为什么3号汽轮机振动持续偏高，怎么处理",
+    "expected_intent": "diagnosis",
+    "expected_params": {
+      "device_id": "turbine_003",
+      "parameter": "vibration",
+      "time_range_hours": 24
+    },
+    "note": "故障诊断+处理建议"
+  },
+  {
+    "id": 5,
+    "message": "你好，你是谁",
+    "expected_intent": "chat",
+    "expected_params": {},
+    "note": "闲聊"
+  },
+  {
+    "id": 6,
+    "message": "2号锅炉炉膛温度最近12小时有异常，请给出处理建议",
+    "expected_intent": "diagnosis",
+    "expected_params": {
+      "device_id": "generator_002",
+      "parameter": "furnace_temp",
+      "time_range_hours": 12
+    },
+    "note": "异常+处理建议 -> diagnosis 优先于 anomaly_detection"
+  },
+  {
+    "id": 7,
+    "message": "显示3号汽轮机的当前转速",
+    "expected_intent": "data_query",
+    "expected_params": {
+      "device_id": "turbine_003",
+      "parameter": "rpm",
+      "time_range_hours": 1
+    },
+    "note": "实时数据查询，当前=最近1小时"
+  },
+  {
+    "id": 8,
+    "message": "2号锅炉主蒸汽温度超过550度，请分析",
+    "expected_intent": "anomaly_detection",
+    "expected_params": {
+      "device_id": "generator_002",
+      "parameter": "steam_temp",
+      "time_range_hours": 24,
+      "threshold": 550
+    },
+    "note": "异常检测+阈值，threshold 可选"
+  },
+  {
+    "id": 9,
+    "message": "4号发电机定子温度一周的变化趋势",
+    "expected_intent": "data_query",
+    "expected_params": {
+      "device_id": "generator_004",
+      "parameter": "stator_temp",
+      "time_range_hours": 168
+    },
+    "note": "历史趋势查询（非预测）"
+  },
+  {
+    "id": 10,
+    "message": "诊断2号锅炉故障原因并生成报告",
+    "expected_intent": "diagnosis",
+    "expected_params": {
+      "device_id": "generator_002",
+      "time_range_hours": 24
+    },
+    "note": "明确诊断意图，parameter 可选"
+  }
+]

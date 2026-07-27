@@ -1,6 +1,7 @@
 """
 LangGraph Agent 工作流
-P0-2: Agent 状态与工作流构建
+P0-2: Agent 状态与工作流构建（关键词规则匹配）
+P0-3: intent_router 接入 DeepSeek LLM，规则匹配作为降级
 
 节点流程:
     intent_router → tool_executor → response_generator
@@ -17,6 +18,7 @@ from agent.prompts.system_prompt import (
     SYSTEM_PROMPT,
     classify_intent,
     extract_params,
+    parse_intent_and_params,
 )
 from agent.tools import call_tool
 from agent.tools.base import INTENT_TOOL_MAP
@@ -32,13 +34,14 @@ def intent_router(state: AgentState) -> AgentState:
     """
     解析用户消息，识别意图并抽取参数。
 
-    P0-2 使用关键词规则匹配，P0-3 将替换为 DeepSeek LLM。
+    P0-3: 优先使用 DeepSeek LLM 意图识别 + 参数抽取，
+    失败时降级为 P0-2 规则匹配（classify_intent + extract_params）。
     """
     messages = state.get("messages", [])
     user_message = messages[-1] if messages else ""
 
-    intent = classify_intent(user_message)
-    params = extract_params(user_message)
+    # P0-3: LLM 意图识别（内部自带降级逻辑）
+    intent, params = parse_intent_and_params(user_message)
 
     logger.info(f"[intent_router] intent={intent}, params={params}")
 
