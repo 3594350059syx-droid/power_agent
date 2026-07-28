@@ -4,26 +4,59 @@ from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.database.models import Device, SensorPoint, TimeseriesData
 
+PARAM_MAP = {
+    'speed': 'rpm',
+    'active_power': 'power',
+    'rpm': 'rpm',
+    'power': 'power',
+    'steam_temp': 'steam_temp',
+    'steam_pressure': 'steam_pressure',
+    'furnace_temp': 'furnace_temp',
+    'water_flow': 'water_flow',
+    'bearing_temp': 'bearing_temp',
+    'vibration': 'vibration',
+    'oil_pressure': 'oil_pressure',
+    'stator_temp': 'stator_temp',
+    'rotor_temp': 'rotor_temp',
+    'power_factor': 'power_factor',
+}
 
-def get_device_id_by_name(device_name: str) -> int:
+
+def resolve_param_name(parameter: str) -> str:
+    return PARAM_MAP.get(parameter, parameter)
+
+
+def get_device_id_by_code_or_name(identifier: str) -> int:
     db = next(get_db())
     try:
-        device = db.query(Device).filter_by(device_name=device_name).first()
+        device = db.query(Device).filter_by(device_code=identifier).first()
+        if device:
+            return device.id
+        device = db.query(Device).filter_by(device_name=identifier).first()
         return device.id if device else None
     finally:
         db.close()
 
 
+def get_device_by_code_or_name(db: Session, identifier: str) -> Device:
+    device = db.query(Device).filter_by(device_code=identifier).first()
+    if device:
+        return device
+    device = db.query(Device).filter_by(device_name=identifier).first()
+    return device
+
+
 def get_sensor_info(db: Session, device_id: int, parameter: str):
+    resolved_name = resolve_param_name(parameter)
     sensor = db.query(SensorPoint).filter(
         SensorPoint.device_id == device_id,
-        SensorPoint.point_name == parameter
+        SensorPoint.point_name == resolved_name
     ).first()
     return sensor
 
 
 def query_timeseries_data(params: dict) -> dict:
-    device_name = params.get('device_id', '')
+    device_id = params.get('device_id', '')
     parameter = params.get('parameter', '')
     start_time = params.get('start_time')
     end_time = params.get('end_time')
@@ -31,13 +64,13 @@ def query_timeseries_data(params: dict) -> dict:
     
     db = next(get_db())
     try:
-        device = db.query(Device).filter_by(device_name=device_name).first()
+        device = get_device_by_code_or_name(db, device_id)
         if not device:
-            return {'error': f"Device '{device_name}' not found"}
+            return {'error': f"Device '{device_id}' not found"}
         
         sensor = get_sensor_info(db, device.id, parameter)
         if not sensor:
-            return {'error': f"Parameter '{parameter}' not found for device '{device_name}'"}
+            return {'error': f"Parameter '{parameter}' not found for device '{device.device_code}'"}
         
         query = db.query(
             TimeseriesData.recorded_at,
@@ -55,8 +88,14 @@ def query_timeseries_data(params: dict) -> dict:
             end_dt = datetime.fromisoformat(end_time)
             query = query.filter(TimeseriesData.recorded_at <= end_dt)
         
+        resolved_param = resolve_param_name(parameter)
+        
         if aggregation:
             result = aggregate_query(query, aggregation)
+            result['device_id'] = device.device_code
+            result['device_name'] = device.device_name
+            result['parameter'] = resolved_param
+            return result
         else:
             rows = query.order_by(TimeseriesData.recorded_at).all()
             data = [{'time': row.recorded_at.isoformat(), 'value': row.value} for row in rows]
@@ -78,8 +117,9 @@ def query_timeseries_data(params: dict) -> dict:
             
             stats_result = stats_query.first()
             result = {
-                'device_id': device_name,
-                'parameter': parameter,
+                'device_id': device.device_code,
+                'device_name': device.device_name,
+                'parameter': resolved_param,
                 'unit': sensor.unit,
                 'data': data,
                 'stats': {
@@ -131,7 +171,7 @@ def aggregate_query(query, aggregation: str):
 
 
 def query_multiple_devices(params: dict) -> dict:
-    device_names = params.get('device_ids', [])
+    device_ids = params.get('device_ids', [])
     parameter = params.get('parameter', '')
     start_time = params.get('start_time')
     end_time = params.get('end_time')
@@ -139,16 +179,17 @@ def query_multiple_devices(params: dict) -> dict:
     db = next(get_db())
     try:
         results = {}
+        resolved_param = resolve_param_name(parameter)
         
-        for device_name in device_names:
-            device = db.query(Device).filter_by(device_name=device_name).first()
+        for device_id in device_ids:
+            device = get_device_by_code_or_name(db, device_id)
             if not device:
-                results[device_name] = {'error': f"Device '{device_name}' not found"}
+                results[device_id] = {'error': f"Device '{device_id}' not found"}
                 continue
             
             sensor = get_sensor_info(db, device.id, parameter)
             if not sensor:
-                results[device_name] = {'error': f"Parameter '{parameter}' not found"}
+                results[device_id] = {'error': f"Parameter '{parameter}' not found"}
                 continue
             
             query = db.query(
@@ -167,8 +208,10 @@ def query_multiple_devices(params: dict) -> dict:
             rows = query.order_by(TimeseriesData.recorded_at).all()
             data = [{'time': row.recorded_at.isoformat(), 'value': row.value} for row in rows]
             
-            results[device_name] = {
-                'parameter': parameter,
+            results[device.device_code] = {
+                'device_code': device.device_code,
+                'device_name': device.device_name,
+                'parameter': resolved_param,
                 'unit': sensor.unit,
                 'data': data,
                 'count': len(data)
@@ -186,6 +229,7 @@ def get_device_list() -> list:
         devices = db.query(Device).all()
         return [{
             'id': device.id,
+            'code': device.device_code,
             'name': device.device_name,
             'type': device.device_type,
             'location': device.location,

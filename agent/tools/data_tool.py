@@ -7,15 +7,16 @@ def data_tool(params: dict) -> dict:
     
     参数:
         params: dict - 查询参数
-            - device_id: str - 设备名称（如 "2号锅炉", "3号汽轮机", "4号发电机"）
-            - parameter: str - 测点参数名（如 "steam_temp", "speed", "active_power"）
+            - device_id: str - 设备编码（英文ID如 "boiler_002", "turbine_003", "generator_004"，或中文名如 "2号锅炉"）
+            - parameter: str - 测点参数名（如 "steam_temp", "rpm", "power"）
             - start_time: str - 开始时间（ISO格式，如 "2026-07-10T00:00:00"）
             - end_time: str - 结束时间（ISO格式）
             - aggregation: str - 聚合间隔（可选，如 "5min", "15min", "1h", "6h", "1d"）
     
     返回:
         dict - 查询结果
-            - device_id: str - 设备名称
+            - device_id: str - 设备编码
+            - device_name: str - 设备中文名
             - parameter: str - 参数名
             - unit: str - 单位
             - data: list - 数据点列表 [{"time": "...", "value": 540.5}, ...]
@@ -30,7 +31,7 @@ def compare_devices_tool(params: dict) -> dict:
     
     参数:
         params: dict - 查询参数
-            - device_ids: list - 设备名称列表
+            - device_ids: list - 设备编码列表（英文ID或中文名）
             - parameter: str - 测点参数名
             - start_time: str - 开始时间
             - end_time: str - 结束时间
@@ -46,23 +47,23 @@ def list_devices_tool() -> list:
     获取设备列表工具
     
     返回:
-        list - 设备信息列表
+        list - 设备信息列表，包含 code（英文ID）和 name（中文名）
     """
     return get_device_list()
 
 
-def list_sensors_tool(device_name: str) -> list:
+def list_sensors_tool(device_code: str) -> list:
     """
     获取设备测点列表工具
     
     参数:
-        device_name: str - 设备名称
+        device_code: str - 设备编码（英文ID或中文名）
     
     返回:
         list - 测点信息列表
     """
     devices = get_device_list()
     for device in devices:
-        if device['name'] == device_name:
+        if device['code'] == device_code or device['name'] == device_code:
             return get_sensor_points(device['id'])
     return []

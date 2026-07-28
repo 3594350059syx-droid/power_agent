@@ -6,16 +6,19 @@ def alarm_tool(device_id: str, hours: int = 24) -> dict:
     告警检测工具函数
     
     参数:
-        device_id: str - 设备名称（如 "2号锅炉", "3号汽轮机", "4号发电机"）
+        device_id: str - 设备编码（英文ID如 "boiler_002", "turbine_003", "generator_004"，或中文名如 "2号锅炉"）
         hours: int - 分析时长（小时），默认为 24 小时
     
     返回:
         dict - 告警检测结果
-            - device_id: str - 设备名称
+            - device_id: str - 设备编码
+            - device_name: str - 设备中文名
             - risk_score: float - 综合风险评分 (0-1)
+            - risk_level: str - 风险等级 ('low', 'medium', 'high')
             - alarms: list - 告警列表
                 - type: str - 告警类型 ('threshold', 'trend')
-                - parameter: str - 参数名
+                - parameter: str - 参数名（规范化名称）
+                - parameter_original: str - 参数原名（数据库存储）
                 - current_value: float - 当前值
                 - threshold: float - 阈值（仅阈值告警）
                 - severity: str - 严重程度 ('high', 'medium', 'low')
@@ -33,7 +36,7 @@ def alarm_history_tool(device_id: str, hours: int = 24, status: str = None) -> l
     获取告警历史记录工具
     
     参数:
-        device_id: str - 设备名称
+        device_id: str - 设备编码（英文ID或中文名）
         hours: int - 查询时长（小时）
         status: str - 告警状态过滤（可选：'pending', 'acknowledged'）
     

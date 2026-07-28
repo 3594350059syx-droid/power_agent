@@ -21,9 +21,9 @@ from anomaly_scenarios import (
 
 
 DEVICES = [
-    {'id': 1, 'name': '2号锅炉', 'type': 'boiler', 'location': '锅炉房A区'},
-    {'id': 2, 'name': '3号汽轮机', 'type': 'turbine', 'location': '汽机厂房B区'},
-    {'id': 3, 'name': '4号发电机', 'type': 'generator', 'location': '发电机厂房C区'},
+    {'id': 1, 'code': 'boiler_002', 'name': '2号锅炉', 'type': 'boiler', 'location': '锅炉房A区'},
+    {'id': 2, 'code': 'turbine_003', 'name': '3号汽轮机', 'type': 'turbine', 'location': '汽机厂房B区'},
+    {'id': 3, 'code': 'generator_004', 'name': '4号发电机', 'type': 'generator', 'location': '发电机厂房C区'},
 ]
 
 SENSOR_POINTS = {
@@ -34,13 +34,13 @@ SENSOR_POINTS = {
         {'name': 'water_flow', 'unit': 't/h', 'normal_min': 95, 'normal_max': 105, 'threshold_high': 115, 'threshold_low': 85},
     ],
     'turbine': [
-        {'name': 'speed', 'unit': 'rpm', 'normal_min': 2950, 'normal_max': 3050, 'threshold_high': 3100, 'threshold_low': 2900},
+        {'name': 'rpm', 'unit': 'rpm', 'normal_min': 2950, 'normal_max': 3050, 'threshold_high': 3100, 'threshold_low': 2900},
         {'name': 'bearing_temp', 'unit': '℃', 'normal_min': 75, 'normal_max': 95, 'threshold_high': 110, 'threshold_low': 65},
         {'name': 'vibration', 'unit': 'mm', 'normal_min': 0.01, 'normal_max': 0.05, 'threshold_high': 0.10, 'threshold_low': 0.005},
         {'name': 'oil_pressure', 'unit': 'MPa', 'normal_min': 0.30, 'normal_max': 0.40, 'threshold_high': 0.45, 'threshold_low': 0.25},
     ],
     'generator': [
-        {'name': 'active_power', 'unit': 'MW', 'normal_min': 250, 'normal_max': 350, 'threshold_high': 380, 'threshold_low': 220},
+        {'name': 'power', 'unit': 'MW', 'normal_min': 250, 'normal_max': 350, 'threshold_high': 380, 'threshold_low': 220},
         {'name': 'stator_temp', 'unit': '℃', 'normal_min': 90, 'normal_max': 120, 'threshold_high': 140, 'threshold_low': 75},
         {'name': 'rotor_temp', 'unit': '℃', 'normal_min': 85, 'normal_max': 105, 'threshold_high': 120, 'threshold_low': 70},
         {'name': 'power_factor', 'unit': '', 'normal_min': 0.92, 'normal_max': 0.98, 'threshold_high': 1.0, 'threshold_low': 0.85},
@@ -53,6 +53,7 @@ def init_devices(db):
     for device in DEVICES:
         db_device = Device(
             id=device['id'],
+            device_code=device['code'],
             device_name=device['name'],
             device_type=device['type'],
             location=device['location'],

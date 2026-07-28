@@ -49,7 +49,7 @@ def generate_normal_turbine_data(start_time: datetime, minutes: int):
         hour = timestamp.hour
         
         data.append({
-            'point_name': 'speed',
+            'point_name': 'rpm',
             'value': generate_normal_value(3000, 50, hour),
             'timestamp': timestamp
         })
@@ -79,7 +79,7 @@ def generate_normal_generator_data(start_time: datetime, minutes: int):
         hour = timestamp.hour
         
         data.append({
-            'point_name': 'active_power',
+            'point_name': 'power',
             'value': generate_normal_value(300, 50, hour),
             'timestamp': timestamp
         })

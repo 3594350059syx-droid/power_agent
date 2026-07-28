@@ -1,31 +1,31 @@
 from datetime import datetime, timedelta
 from backend.database.connection import get_db
 from backend.database.models import Device, SensorPoint, AlarmRecord, TimeseriesData
-from backend.services.data_service import get_device_id_by_name, get_sensor_info
+from backend.services.data_service import get_device_by_code_or_name, resolve_param_name, get_sensor_info
 from algorithms.anomaly_detection.threshold_detector import ThresholdDetector
 from algorithms.anomaly_detection.trend_detector import TrendDetector
 from algorithms.anomaly_detection.risk_scorer import RiskScorer
 
 
-def analyze_device_anomalies(device_name: str, hours: int = 24) -> dict:
+def analyze_device_anomalies(device_id: str, hours: int = 24) -> dict:
     """
     分析设备异常情况
     
     参数:
-        device_name: str - 设备名称
+        device_id: str - 设备编码（英文ID或中文名均可）
         hours: int - 分析时长（小时）
     
     返回:
         dict - 异常分析结果
-            - device_id: str - 设备名称
+            - device_id: str - 设备编码
             - risk_score: float - 综合风险评分
             - alarms: list - 告警列表
     """
     db = next(get_db())
     try:
-        device = db.query(Device).filter_by(device_name=device_name).first()
+        device = get_device_by_code_or_name(db, device_id)
         if not device:
-            return {'error': f"Device '{device_name}' not found"}
+            return {'error': f"Device '{device_id}' not found"}
         
         end_time = datetime.now()
         start_time = end_time - timedelta(hours=hours)
@@ -63,10 +63,13 @@ def analyze_device_anomalies(device_name: str, hours: int = 24) -> dict:
             threshold_result = threshold_detector.detect(latest_value)
             trend_result = trend_detector.detect(data_points)
             
+            resolved_param = resolve_param_name(sensor.point_name)
+            
             if threshold_result['is_anomaly']:
                 alarms.append({
                     'type': 'threshold',
-                    'parameter': sensor.point_name,
+                    'parameter': resolved_param,
+                    'parameter_original': sensor.point_name,
                     'current_value': threshold_result['current_value'],
                     'threshold': threshold_result['threshold_value'],
                     'severity': threshold_result['severity'],
@@ -78,7 +81,8 @@ def analyze_device_anomalies(device_name: str, hours: int = 24) -> dict:
             if trend_result['is_anomaly']:
                 alarms.append({
                     'type': 'trend',
-                    'parameter': sensor.point_name,
+                    'parameter': resolved_param,
+                    'parameter_original': sensor.point_name,
                     'trend_desc': trend_result['trend_desc'],
                     'slope': trend_result['slope'],
                     'rate_of_change': trend_result['rate_of_change'],
@@ -96,7 +100,8 @@ def analyze_device_anomalies(device_name: str, hours: int = 24) -> dict:
         )
         
         return {
-            'device_id': device_name,
+            'device_id': device.device_code,
+            'device_name': device.device_name,
             'risk_score': risk_result['risk_score'],
             'risk_level': risk_result['level'],
             'alarms': alarms,
@@ -109,12 +114,12 @@ def analyze_device_anomalies(device_name: str, hours: int = 24) -> dict:
         db.close()
 
 
-def get_alarm_history(device_name: str, hours: int = 24, status: str = None) -> list:
+def get_alarm_history(device_id: str, hours: int = 24, status: str = None) -> list:
     """
     获取告警历史记录
     
     参数:
-        device_name: str - 设备名称
+        device_id: str - 设备编码（英文ID或中文名均可）
         hours: int - 查询时长（小时）
         status: str - 告警状态过滤（可选）
     
@@ -123,7 +128,7 @@ def get_alarm_history(device_name: str, hours: int = 24, status: str = None) -> 
     """
     db = next(get_db())
     try:
-        device = db.query(Device).filter_by(device_name=device_name).first()
+        device = get_device_by_code_or_name(db, device_id)
         if not device:
             return []
         
@@ -144,10 +149,12 @@ def get_alarm_history(device_name: str, hours: int = 24, status: str = None) -> 
         alarms = []
         for row in rows:
             sensor = db.query(SensorPoint).filter_by(id=row.sensor_id).first()
+            resolved_param = resolve_param_name(sensor.point_name) if sensor else ''
             alarms.append({
                 'id': row.id,
                 'type': row.alarm_type,
-                'parameter': sensor.point_name if sensor else '',
+                'parameter': resolved_param,
+                'parameter_original': sensor.point_name if sensor else '',
                 'severity': row.severity,
                 'current_value': row.current_value,
                 'threshold_value': row.threshold_value,
@@ -200,11 +207,14 @@ def get_all_pending_alarms() -> list:
         for row in rows:
             device = db.query(Device).filter_by(id=row.device_id).first()
             sensor = db.query(SensorPoint).filter_by(id=row.sensor_id).first()
+            resolved_param = resolve_param_name(sensor.point_name) if sensor else ''
             alarms.append({
                 'id': row.id,
+                'device_code': device.device_code if device else '',
                 'device_name': device.device_name if device else '',
                 'device_type': device.device_type if device else '',
-                'parameter': sensor.point_name if sensor else '',
+                'parameter': resolved_param,
+                'parameter_original': sensor.point_name if sensor else '',
                 'severity': row.severity,
                 'current_value': row.current_value,
                 'threshold_value': row.threshold_value,
