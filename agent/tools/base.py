@@ -19,7 +19,7 @@ def data_tool(params: dict) -> dict:
 
     输入:
         {
-            "device_id": "generator_002",
+            "device_id": "boiler_002",
             "parameter": "steam_temp",
             "start_time": "2026-07-10T00:00:00",
             "end_time": "2026-07-11T00:00:00"
@@ -27,7 +27,7 @@ def data_tool(params: dict) -> dict:
 
     输出:
         {
-            "device_id": "generator_002",
+            "device_id": "boiler_002",
             "parameter": "steam_temp",
             "unit": "℃",
             "data": [
@@ -44,10 +44,10 @@ def alarm_tool(device_id: str, hours: int = 24) -> dict:
     """
     [B 实现] 检测设备异常
 
-    输入: device_id="generator_002", hours=24
+    输入: device_id="boiler_002", hours=24
     输出:
         {
-            "device_id": "generator_002",
+            "device_id": "boiler_002",
             "risk_score": 0.85,
             "alarms": [
                 {
@@ -68,7 +68,7 @@ def predict_tool(device_id: str, parameter: str, hours: int = 6) -> dict:
     """
     [B 实现] 预测未来趋势
 
-    输入: device_id="generator_002", parameter="steam_temp", hours=6
+    输入: device_id="boiler_002", parameter="steam_temp", hours=6
     输出:
         {
             "predictions": [

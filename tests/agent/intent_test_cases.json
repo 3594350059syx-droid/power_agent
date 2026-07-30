@@ -4,7 +4,7 @@
     "message": "分析2号机组过去24小时主蒸汽温度异常",
     "expected_intent": "anomaly_detection",
     "expected_params": {
-      "device_id": "generator_002",
+      "device_id": "boiler_002",
       "parameter": "steam_temp",
       "time_range_hours": 24
     },
@@ -26,7 +26,7 @@
     "message": "预测2号锅炉未来6小时主蒸汽温度趋势",
     "expected_intent": "prediction",
     "expected_params": {
-      "device_id": "generator_002",
+      "device_id": "boiler_002",
       "parameter": "steam_temp",
       "time_range_hours": 6
     },
@@ -55,7 +55,7 @@
     "message": "2号锅炉炉膛温度最近12小时有异常，请给出处理建议",
     "expected_intent": "diagnosis",
     "expected_params": {
-      "device_id": "generator_002",
+      "device_id": "boiler_002",
       "parameter": "furnace_temp",
       "time_range_hours": 12
     },
@@ -77,7 +77,7 @@
     "message": "2号锅炉主蒸汽温度超过550度，请分析",
     "expected_intent": "anomaly_detection",
     "expected_params": {
-      "device_id": "generator_002",
+      "device_id": "boiler_002",
       "parameter": "steam_temp",
       "time_range_hours": 24,
       "threshold": 550
@@ -100,7 +100,7 @@
     "message": "诊断2号锅炉故障原因并生成报告",
     "expected_intent": "diagnosis",
     "expected_params": {
-      "device_id": "generator_002",
+      "device_id": "boiler_002",
       "time_range_hours": 24
     },
     "note": "明确诊断意图，parameter 可选"

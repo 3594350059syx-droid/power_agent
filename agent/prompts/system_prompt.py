@@ -47,7 +47,7 @@ INTENT_DESCRIPTIONS = """\
 PARAM_EXTRACTION_TEMPLATE = """\
 请从用户消息中提取以下参数（如果存在）：
 
-- device_id: 设备 ID（如 generator_002 / turbine_003 / generator_004）
+- device_id: 设备 ID（如 boiler_002 / turbine_003 / generator_004）
 - parameter: 参数名（如 steam_temp / steam_pressure / vibration / power）
 - time_range_hours: 时间范围（小时，默认 24）
 - threshold: 阈值（用户提到的数值阈值，如 550、80 等，无则不填）
@@ -63,8 +63,8 @@ PARAM_EXTRACTION_TEMPLATE = """\
   定子温度   → stator_temp
 
 设备名映射表：
-  2号锅炉   → generator_002
-  2号机组   → generator_002
+  2号锅炉   → boiler_002
+  2号机组   → boiler_002
   3号汽轮机 → turbine_003
   3号机组   → turbine_003
   4号发电机 → generator_004
@@ -133,8 +133,8 @@ def extract_params(message: str) -> dict:
 
     # 设备 ID
     device_map = {
-        "2号锅炉": "generator_002",
-        "2号机组": "generator_002",
+        "2号锅炉": "boiler_002",
+        "2号机组": "boiler_002",
         "3号汽轮机": "turbine_003",
         "3号机组": "turbine_003",
         "4号发电机": "generator_004",

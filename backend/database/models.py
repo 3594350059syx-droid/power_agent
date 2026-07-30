@@ -7,6 +7,7 @@ class Device(Base):
     __tablename__ = "device"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    device_code = Column(String(50), unique=True, nullable=False)
     device_name = Column(String(100), nullable=False)
     device_type = Column(String(50), nullable=False)
     location = Column(String(200))
