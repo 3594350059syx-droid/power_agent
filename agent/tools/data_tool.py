@@ -1,97 +1,76 @@
 """
-数据查询 Tool — Mock 实现
-P0-2: B 的 data_tool 未到位前使用此 mock
+数据查询 Tool — B 的真实实现
+P0-3: 数据查询服务，对接 TimescaleDB
 
-B 完成真实实现后，将 workflow 中的 mock 调用替换为:
-    from backend.services.data_service import data_tool
+B 完成实现后，由 __init__.py 自动选择真实实现（数据库可用时）
+或降级为 mock（data_tool_mock）。
 """
-import random
-from datetime import datetime, timedelta
+from backend.services.data_service import query_timeseries_data, query_multiple_devices, get_device_list, get_sensor_points
 
 
-def data_tool_mock(params: dict) -> dict:
+def data_tool(params: dict) -> dict:
     """
-    Mock: 查询设备时序数据
+    查询时序数据的工具函数
 
-    生成符合 data_tool 签名的模拟返回值。
+    参数:
+        params: dict - 查询参数
+            - device_id: str - 设备编码（英文ID如 "boiler_002", "turbine_003", "generator_004"，或中文名如 "2号锅炉"）
+            - parameter: str - 测点参数名（如 "steam_temp", "rpm", "power"）
+            - start_time: str - 开始时间（ISO格式，如 "2026-07-10T00:00:00"）
+            - end_time: str - 结束时间（ISO格式）
+            - aggregation: str - 聚合间隔（可选，如 "5min", "15min", "1h", "6h", "1d"）
+
+    返回:
+        dict - 查询结果
+            - device_id: str - 设备编码
+            - device_name: str - 设备中文名
+            - parameter: str - 参数名
+            - unit: str - 单位
+            - data: list - 数据点列表 [{"time": "...", "value": 540.5}, ...]
+            - stats: dict - 统计信息 {"min": 535.0, "max": 575.0, "avg": 548.3, "count": 1440}
     """
-    device_id = params.get("device_id", "generator_002")
-    parameter = params.get("parameter", "steam_temp")
-    hours = params.get("time_range_hours", 24)
-
-    # 参数 → 单位 + 基准值映射
-    param_config = {
-        "steam_temp":     {"unit": "\u2103",  "base": 540,  "range": 15},
-        "steam_pressure": {"unit": "MPa", "base": 16.7, "range": 0.5},
-        "furnace_temp":   {"unit": "\u2103",  "base": 1200, "range": 50},
-        "rpm":            {"unit": "rpm", "base": 3000, "range": 50},
-        "bearing_temp":   {"unit": "\u2103",  "base": 85,   "range": 10},
-        "vibration":      {"unit": "mm",  "base": 0.03, "range": 0.02},
-        "power":          {"unit": "MW",  "base": 300,  "range": 50},
-        "stator_temp":    {"unit": "\u2103",  "base": 105,  "range": 15},
-    }
-
-    cfg = param_config.get(parameter, {"unit": "", "base": 100, "range": 10})
-
-    # 生成模拟数据（每小时 1 个点）
-    now = datetime.now()
-    data = []
-    values = []
-    for i in range(hours):
-        t = now - timedelta(hours=hours - i)
-        value = round(cfg["base"] + random.uniform(-cfg["range"], cfg["range"]), 2)
-        data.append({"time": t.strftime("%Y-%m-%dT%H:%M:%S"), "value": value})
-        values.append(value)
-
-    return {
-        "device_id": device_id,
-        "parameter": parameter,
-        "unit": cfg["unit"],
-        "data": data,
-        "stats": {
-            "min": round(min(values), 2),
-            "max": round(max(values), 2),
-            "avg": round(sum(values) / len(values), 2),
-            "count": len(values),
-        },
-    }
+    return query_timeseries_data(params)
 
 
-def predict_tool_mock(
-    device_id: str = "generator_002",
-    parameter: str = "steam_temp",
-    hours: int = 6,
-) -> dict:
+def compare_devices_tool(params: dict) -> dict:
     """
-    Mock: 预测设备参数未来走势
+    多设备对比查询工具
 
-    与 real predict_tool 签名一致: (device_id, parameter, hours)。
+    参数:
+        params: dict - 查询参数
+            - device_ids: list - 设备编码列表（英文ID或中文名）
+            - parameter: str - 测点参数名
+            - start_time: str - 开始时间
+            - end_time: str - 结束时间
+
+    返回:
+        dict - 各设备查询结果
     """
-    param_config = {
-        "steam_temp":     {"unit": "℃",  "base": 540,  "trend": 0.8},
-        "steam_pressure": {"unit": "MPa", "base": 16.7, "trend": -0.02},
-        "furnace_temp":   {"unit": "℃",  "base": 1200, "trend": -2.5},
-        "rpm":            {"unit": "rpm", "base": 3000, "trend": 1.2},
-        "bearing_temp":   {"unit": "℃",  "base": 85,   "trend": 0.15},
-        "vibration":      {"unit": "mm",  "base": 0.03, "trend": 0.002},
-        "power":          {"unit": "MW",  "base": 300,  "trend": -1.0},
-        "stator_temp":    {"unit": "℃",  "base": 105,  "trend": 0.3},
-    }
-    cfg = param_config.get(parameter, {"unit": "", "base": 100, "trend": 0})
+    return query_multiple_devices(params)
 
-    from datetime import datetime, timedelta
-    now = datetime.now()
-    predictions = []
-    for i in range(1, hours + 1):
-        t = now + timedelta(hours=i)
-        value = round(cfg["base"] + cfg["trend"] * i, 2)
-        predictions.append({"time": t.strftime("%Y-%m-%dT%H:%M:%S"), "value": value})
 
-    return {
-        "device_id": device_id,
-        "parameter": parameter,
-        "unit": cfg["unit"],
-        "predictions": predictions,
-        "trend": "上升" if cfg["trend"] > 0 else "下降",
-        "forecast_hours": hours,
-    }
+def list_devices_tool() -> list:
+    """
+    获取设备列表工具
+
+    返回:
+        list - 设备信息列表，包含 code（英文ID）和 name（中文名）
+    """
+    return get_device_list()
+
+
+def list_sensors_tool(device_code: str) -> list:
+    """
+    获取设备测点列表工具
+
+    参数:
+        device_code: str - 设备编码（英文ID或中文名）
+
+    返回:
+        list - 测点信息列表
+    """
+    devices = get_device_list()
+    for device in devices:
+        if device['code'] == device_code or device['name'] == device_code:
+            return get_sensor_points(device['id'])
+    return []

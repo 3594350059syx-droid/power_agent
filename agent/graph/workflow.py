@@ -74,11 +74,11 @@ def tool_executor(state: AgentState) -> AgentState:
             if tool_name == "data_tool":
                 result = call_tool("data_tool", params=params)
             elif tool_name == "alarm_tool":
-                device_id = params.get("device_id", "generator_002")
+                device_id = params.get("device_id", "boiler_002")
                 hours = params.get("time_range_hours", 24)
                 result = call_tool("alarm_tool", device_id=device_id, hours=hours)
             elif tool_name == "predict_tool":
-                device_id = params.get("device_id", "generator_002")
+                device_id = params.get("device_id", "boiler_002")
                 parameter = params.get("parameter", "steam_temp")
                 hours = params.get("time_range_hours", 6)
                 result = call_tool("predict_tool", device_id=device_id,

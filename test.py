@@ -89,7 +89,7 @@ print("=" * 60)
 
 # data_tool
 r = call_tool("data_tool", params={
-    "device_id": "generator_002", "parameter": "steam_temp", "time_range_hours": 24
+    "device_id": "boiler_002", "parameter": "steam_temp", "time_range_hours": 24
 })
 check("data_tool has 'data' list, len=24",
       isinstance(r.get("data"), list) and len(r["data"]) == 24)
@@ -97,7 +97,7 @@ check("data_tool has stats(min/max/avg/count)",
       all(k in r.get("stats", {}) for k in ["min", "max", "avg", "count"]))
 
 # alarm_tool
-r = call_tool("alarm_tool", device_id="generator_002", hours=24)
+r = call_tool("alarm_tool", device_id="boiler_002", hours=24)
 check("alarm_tool risk_score in [0,1]",
       0 <= r.get("risk_score", -1) <= 1)
 check("alarm_tool alarms >= 1",
@@ -154,8 +154,8 @@ print("6. 参数抽取")
 print("=" * 60)
 
 r = extract_params("\u5206\u6790\u0032\u53f7\u673a\u7ec4\u4e3b\u84b8\u6c7d\u6e29\u5ea6\u8fc7\u53bb\u0032\u0034\u5c0f\u65f6\u5f02\u5e38")
-check("gen2 + steam_temp + 24h",
-      r.get("device_id") == "generator_002"
+check("boiler2 + steam_temp + 24h",
+      r.get("device_id") == "boiler_002"
       and r.get("parameter") == "steam_temp"
       and r.get("time_range_hours") == 24,
       str(r))

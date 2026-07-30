@@ -1,37 +1,81 @@
 """
-告警检测 Tool — Mock 实现
-P0-2: B 的 alarm_tool 未到位前使用此 mock
+告警检测 Tool — B 的真实实现
+P0-4: 异常检测算法，对接阈值检测 + 趋势检测 + 风险评分
 
-B 完成真实实现后，将 workflow 中的 mock 调用替换为:
-    from backend.services.alarm_service import alarm_tool
+B 完成实现后，由 __init__.py 自动选择真实实现（数据库可用时）
+或降级为 mock（alarm_tool_mock）。
 """
+from backend.services.alarm_service import analyze_device_anomalies, get_alarm_history, get_all_pending_alarms, acknowledge_alarm
 
 
-def alarm_tool_mock(device_id: str, hours: int = 24) -> dict:
+def alarm_tool(device_id: str, hours: int = 24) -> dict:
     """
-    Mock: 检测设备异常
+    告警检测工具函数
 
-    生成符合 alarm_tool 签名的模拟返回值，包含阈值异常和趋势异常。
+    参数:
+        device_id: str - 设备编码（英文ID如 "boiler_002", "turbine_003", "generator_004"，或中文名如 "2号锅炉"）
+        hours: int - 分析时长（小时），默认为 24 小时
+
+    返回:
+        dict - 告警检测结果
+            - device_id: str - 设备编码
+            - device_name: str - 设备中文名
+            - risk_score: float - 综合风险评分 (0-1)
+            - risk_level: str - 风险等级 ('low', 'medium', 'high')
+            - alarms: list - 告警列表
+                - type: str - 告警类型 ('threshold', 'trend')
+                - parameter: str - 参数名（规范化名称）
+                - parameter_original: str - 参数原名（数据库存储）
+                - current_value: float - 当前值
+                - threshold: float - 阈值（仅阈值告警）
+                - severity: str - 严重程度 ('high', 'medium', 'low')
+                - score: float - 异常得分
+                - triggered_at: str - 触发时间
+                - trend_desc: str - 趋势描述（仅趋势告警）
+                - slope: float - 斜率（仅趋势告警）
+            - recommendations: list - 建议措施
     """
+    return analyze_device_anomalies(device_id, hours)
+
+
+def alarm_history_tool(device_id: str, hours: int = 24, status: str = None) -> list:
+    """
+    获取告警历史记录工具
+
+    参数:
+        device_id: str - 设备编码（英文ID或中文名）
+        hours: int - 查询时长（小时）
+        status: str - 告警状态过滤（可选：'pending', 'acknowledged'）
+
+    返回:
+        list - 告警历史记录列表
+    """
+    return get_alarm_history(device_id, hours, status)
+
+
+def pending_alarms_tool() -> list:
+    """
+    获取所有待处理告警工具
+
+    返回:
+        list - 待处理告警列表
+    """
+    return get_all_pending_alarms()
+
+
+def acknowledge_alarm_tool(alarm_id: int) -> dict:
+    """
+    确认告警工具
+
+    参数:
+        alarm_id: int - 告警ID
+
+    返回:
+        dict - 确认结果
+    """
+    success = acknowledge_alarm(alarm_id)
     return {
-        "device_id": device_id,
-        "risk_score": 0.72,
-        "alarms": [
-            {
-                "type": "threshold",
-                "parameter": "steam_temp",
-                "current_value": 568.5,
-                "threshold": 555.0,
-                "severity": "high",
-                "triggered_at": "2026-07-10T14:30:00",
-                "message": f"{device_id} \u4e3b\u84b8\u6c7d\u6e29\u5ea6\u8d85\u9608\u503c 555\u2103\uff0c\u5f53\u524d 568.5\u2103",
-            },
-            {
-                "type": "trend",
-                "parameter": "steam_temp",
-                "trend_desc": "\u8fc7\u53bb30\u5206\u949f\u4e3b\u84b8\u6c7d\u6e29\u5ea6\u4e0a\u5347 12.3\u2103",
-                "slope": 0.41,
-                "severity": "medium",
-            },
-        ],
+        'success': success,
+        'alarm_id': alarm_id,
+        'message': '告警已确认' if success else '确认失败，告警不存在'
     }

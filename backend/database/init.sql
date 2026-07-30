@@ -1,5 +1,6 @@
 CREATE TABLE device (
     id SERIAL PRIMARY KEY,
+    device_code VARCHAR(50) UNIQUE NOT NULL,
     device_name VARCHAR(100) NOT NULL,
     device_type VARCHAR(50) NOT NULL,
     location VARCHAR(200),
@@ -8,7 +9,8 @@ CREATE TABLE device (
 );
 
 COMMENT ON COLUMN device.id IS '设备ID';
-COMMENT ON COLUMN device.device_name IS '设备名称';
+COMMENT ON COLUMN device.device_code IS '设备编码（英文ID，如boiler_002）';
+COMMENT ON COLUMN device.device_name IS '设备名称（中文名，如2号锅炉）';
 COMMENT ON COLUMN device.device_type IS '设备类型';
 COMMENT ON COLUMN device.location IS '设备位置';
 COMMENT ON COLUMN device.status IS '设备状态';
@@ -100,6 +102,7 @@ COMMENT ON COLUMN diagnosis_result.causes IS '可能原因';
 COMMENT ON COLUMN diagnosis_result.suggestions IS '处理建议';
 COMMENT ON COLUMN diagnosis_result.created_at IS '创建时间';
 
+CREATE INDEX idx_device_code ON device(device_code);
 CREATE INDEX idx_device_type ON device(device_type);
 CREATE INDEX idx_sensor_device ON sensor_point(device_id);
 CREATE INDEX idx_alarm_device ON alarm_record(device_id);

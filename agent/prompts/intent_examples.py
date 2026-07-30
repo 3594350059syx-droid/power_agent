@@ -26,7 +26,7 @@ FEW_SHOT_EXAMPLES = [
         "message": "分析2号机组过去24小时主蒸汽温度异常",
         "intent": "anomaly_detection",
         "params": {
-            "device_id": "generator_002",
+            "device_id": "boiler_002",
             "parameter": "steam_temp",
             "time_range_hours": 24,
         },
@@ -44,7 +44,7 @@ FEW_SHOT_EXAMPLES = [
         "message": "预测2号锅炉未来6小时主蒸汽温度趋势",
         "intent": "prediction",
         "params": {
-            "device_id": "generator_002",
+            "device_id": "boiler_002",
             "parameter": "steam_temp",
             "time_range_hours": 6,
         },
@@ -67,7 +67,7 @@ FEW_SHOT_EXAMPLES = [
         "message": "2号锅炉炉膛温度最近12小时有异常，请给出处理建议",
         "intent": "diagnosis",
         "params": {
-            "device_id": "generator_002",
+            "device_id": "boiler_002",
             "parameter": "furnace_temp",
             "time_range_hours": 12,
         },
