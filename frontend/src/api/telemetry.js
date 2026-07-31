@@ -1,1 +1,24 @@
-// 数据查询 API（P02 开发）
+import request from './index'  // ← 改成相对路径，引用同目录下的 index.js
+
+/**
+ * 获取实时监控数据
+ * @param {string} deviceId - 设备ID
+ * @returns {Promise}
+ */
+export function getLiveTelemetry(deviceId = 'dev_001') {
+  return request({
+    url: '/telemetry/live',
+    method: 'get',
+    params: { device_id: deviceId }
+  })
+}
+
+/**
+ * 获取多台设备实时数据
+ * @param {string[]} deviceIds - 设备ID列表
+ * @returns {Promise}
+ */
+export function getMultipleDevicesTelemetry(deviceIds = ['dev_001', 'dev_002', 'dev_003']) {
+  const promises = deviceIds.map(id => getLiveTelemetry(id))
+  return Promise.all(promises)
+}
