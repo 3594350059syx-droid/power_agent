@@ -66,34 +66,17 @@ data/
 *.db
 data/database/*.db
 
-# ====================
+# 输出目录
+output/
+docs/build/
+
+# RAG index (runtime artifacts)
+rag/retriever/index/
+
 # 模型文件
-# ====================
 models/checkpoints/*.pt
 *.pt
 *.pth
 
-# ====================
-# 输出目录
-# ====================
-output/
-docs/_build/
-# RAG index (runtime artifacts)
-rag/retriever/index/
-
-# ====================
-# 模型文件
-# ===========models/checkpoints/*.pt
-*.pt
-*.pth
-
-# ====================
-# 输出目录
-# ====================
-output/
-docs/_build/
-
-# ====================
 # Qoder
-# ====================
 .qoder/
