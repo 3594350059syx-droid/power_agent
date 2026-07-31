@@ -1,3 +1,81 @@
-# P0-4 (Week 3): 告警检测 Tool
-# 依赖：B 的 backend/services/alarm_service.py 提供 alarm_tool() 函数
-# 当前阶段：占位，Agent 直接调用 B 的函数，不经过 LangGraph Tool 封装
+"""
+告警检测 Tool — B 的真实实现
+P0-4: 异常检测算法，对接阈值检测 + 趋势检测 + 风险评分
+
+B 完成实现后，由 __init__.py 自动选择真实实现（数据库可用时）
+或降级为 mock（alarm_tool_mock）。
+"""
+from backend.services.alarm_service import analyze_device_anomalies, get_alarm_history, get_all_pending_alarms, acknowledge_alarm
+
+
+def alarm_tool(device_id: str, hours: int = 24) -> dict:
+    """
+    告警检测工具函数
+
+    参数:
+        device_id: str - 设备编码（英文ID如 "boiler_002", "turbine_003", "generator_004"，或中文名如 "2号锅炉"）
+        hours: int - 分析时长（小时），默认为 24 小时
+
+    返回:
+        dict - 告警检测结果
+            - device_id: str - 设备编码
+            - device_name: str - 设备中文名
+            - risk_score: float - 综合风险评分 (0-1)
+            - risk_level: str - 风险等级 ('low', 'medium', 'high')
+            - alarms: list - 告警列表
+                - type: str - 告警类型 ('threshold', 'trend')
+                - parameter: str - 参数名（规范化名称）
+                - parameter_original: str - 参数原名（数据库存储）
+                - current_value: float - 当前值
+                - threshold: float - 阈值（仅阈值告警）
+                - severity: str - 严重程度 ('high', 'medium', 'low')
+                - score: float - 异常得分
+                - triggered_at: str - 触发时间
+                - trend_desc: str - 趋势描述（仅趋势告警）
+                - slope: float - 斜率（仅趋势告警）
+            - recommendations: list - 建议措施
+    """
+    return analyze_device_anomalies(device_id, hours)
+
+
+def alarm_history_tool(device_id: str, hours: int = 24, status: str = None) -> list:
+    """
+    获取告警历史记录工具
+
+    参数:
+        device_id: str - 设备编码（英文ID或中文名）
+        hours: int - 查询时长（小时）
+        status: str - 告警状态过滤（可选：'pending', 'acknowledged'）
+
+    返回:
+        list - 告警历史记录列表
+    """
+    return get_alarm_history(device_id, hours, status)
+
+
+def pending_alarms_tool() -> list:
+    """
+    获取所有待处理告警工具
+
+    返回:
+        list - 待处理告警列表
+    """
+    return get_all_pending_alarms()
+
+
+def acknowledge_alarm_tool(alarm_id: int) -> dict:
+    """
+    确认告警工具
+
+    参数:
+        alarm_id: int - 告警ID
+
+    返回:
+        dict - 确认结果
+    """
+    success = acknowledge_alarm(alarm_id)
+    return {
+        'success': success,
+        'alarm_id': alarm_id,
+        'message': '告警已确认' if success else '确认失败，告警不存在'
+    }
