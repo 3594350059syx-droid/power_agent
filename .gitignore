@@ -80,6 +80,8 @@ output/
 docs/_build/
 # RAG index (runtime artifacts)
 rag/retriever/index/
+# RAG 本地模型文件 (390MB, 不进 git, 用 rag/embedding/download_model.py 下载)
+rag/models/
 
 # ====================
 # 模型文件
