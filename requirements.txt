@@ -25,5 +25,5 @@ openai>=1.10.0
 faiss-cpu>=1.7.4
 sentence-transformers>=2.3.0
 
-# Prophet (后续启用)
-# prophet>=1.1.0
+# Prediction
+prophet>=1.1.0

@@ -23,6 +23,7 @@ Thumbs.db
 # Models
 models/checkpoints/*.pth
 models/checkpoints/*.pt
+models/prediction/*.pkl
 
 # Data
 data/database/*.db
