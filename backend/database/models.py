@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Double, DateTime, ForeignKey, Text, ARRAY
+from sqlalchemy import Column, Integer, BigInteger, String, Double, DateTime, ForeignKey, Text, ARRAY
 from sqlalchemy.sql import func
 from backend.database.connection import Base
 
@@ -32,7 +32,8 @@ class SensorPoint(Base):
 class TimeseriesData(Base):
     __tablename__ = "timeseries_data"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    # 与 init.sql 的 BIGSERIAL 一致，使用 64 位整型，避免 32 位 Integer 溢出
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
     device_id = Column(Integer, ForeignKey("device.id"))
     sensor_id = Column(Integer, ForeignKey("sensor_point.id"))
     value = Column(Double, nullable=False)

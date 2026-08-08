@@ -1,1 +1,0 @@
-feat: complete P0-2, P0-3, P0-4 tasks - data generation, query service, and anomaly detection

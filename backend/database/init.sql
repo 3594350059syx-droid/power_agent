@@ -44,7 +44,9 @@ CREATE TABLE timeseries_data (
     sensor_id INTEGER REFERENCES sensor_point(id),
     value DOUBLE PRECISION NOT NULL,
     quality VARCHAR(10) DEFAULT 'good',
-    recorded_at TIMESTAMPTZ NOT NULL
+    recorded_at TIMESTAMPTZ NOT NULL,
+    -- TimescaleDB hypertable 的唯一约束/主键必须包含分区列 recorded_at
+    PRIMARY KEY (id, recorded_at)
 );
 
 COMMENT ON COLUMN timeseries_data.id IS '数据ID';

@@ -159,17 +159,26 @@ def create_alarm_records(db, device_id: int, anomalies: list, sensor_map: dict):
             sensor = db.query(SensorPoint).filter_by(id=sensor_id).first()
             if sensor:
                 alarm_type = 'threshold'
-                severity = 'high'
-                
+
                 if item['value'] > sensor.threshold_high:
                     threshold_value = sensor.threshold_high
+                    excess = item['value'] - sensor.threshold_high
                     message = f"{sensor.point_name} 超过高阈值: {item['value']} > {threshold_value}"
                 elif item['value'] < sensor.threshold_low:
                     threshold_value = sensor.threshold_low
+                    excess = sensor.threshold_low - item['value']
                     message = f"{sensor.point_name} 低于低阈值: {item['value']} < {threshold_value}"
                 else:
+                    # 未超阈值不生成告警记录
                     continue
-                
+
+                # 按超限幅度分级 severity，与 ThresholdDetector 的 score 逻辑保持一致：
+                #   score = min(1.0, excess / margin * 2)，margin = threshold_high - threshold_low
+                #   score > 0.5 → high，否则 medium
+                margin = (sensor.threshold_high - sensor.threshold_low) or 1.0
+                score = min(1.0, excess / margin * 2)
+                severity = 'high' if score > 0.5 else 'medium'
+
                 alarm = AlarmRecord(
                     device_id=device_id,
                     sensor_id=sensor_id,
@@ -182,9 +191,9 @@ def create_alarm_records(db, device_id: int, anomalies: list, sensor_map: dict):
                     triggered_at=item['timestamp']
                 )
                 db.add(alarm)
-    
+
     db.commit()
-    print(f"Created {len(anomalies)} alarm records")
+    print(f"Created alarm records for {len(anomalies)} anomaly points")
 
 
 def main():

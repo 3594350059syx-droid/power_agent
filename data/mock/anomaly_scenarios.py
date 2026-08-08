@@ -70,7 +70,8 @@ def inject_stator_overheat(data: list, start_offset: int, duration_minutes: int)
             if base_time <= timestamp <= end_time:
                 elapsed = (timestamp - base_time).total_seconds() / 60
                 progress = elapsed / duration_minutes
-                item['value'] = 105 + 20 * (1 - (1 - progress) ** 2)
+                # 注入上限提至 145℃，确保超过 stator_temp 的 threshold_high(140) 以触发阈值告警
+                item['value'] = 105 + 40 * (1 - (1 - progress) ** 2)
                 affected_points.append(item)
     
     return affected_points
