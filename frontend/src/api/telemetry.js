@@ -1,11 +1,11 @@
-import request from './index'  // ← 改成相对路径，引用同目录下的 index.js
+import request from './index'
 
 /**
  * 获取实时监控数据
  * @param {string} deviceId - 设备ID
  * @returns {Promise}
  */
-export function getLiveTelemetry(deviceId = 'dev_001') {
+export function getLiveTelemetry(deviceId = 'boiler_002') {
   return request({
     url: '/telemetry/live',
     method: 'get',
@@ -18,7 +18,7 @@ export function getLiveTelemetry(deviceId = 'dev_001') {
  * @param {string[]} deviceIds - 设备ID列表
  * @returns {Promise}
  */
-export function getMultipleDevicesTelemetry(deviceIds = ['dev_001', 'dev_002', 'dev_003']) {
+export function getMultipleDevicesTelemetry(deviceIds = ['boiler_002', 'turbine_003', 'generator_004']) {
   const promises = deviceIds.map(id => getLiveTelemetry(id))
   return Promise.all(promises)
 }

@@ -67,9 +67,9 @@ import { getMultipleDevicesTelemetry } from '@/api/telemetry'
 
 // ============ 设备配置 ============
 const DEVICE_CONFIG = [
-  { id: 'dev_001', name: '2号锅炉' },
-  { id: 'dev_002', name: '3号锅炉' },
-  { id: 'dev_003', name: '4号锅炉' }
+  { id: 'boiler_002', name: '2号机组' },
+  { id: 'turbine_003', name: '3号汽轮机' },
+  { id: 'generator_004', name: '4号发电机' }
 ]
 
 // ============ 状态 ============

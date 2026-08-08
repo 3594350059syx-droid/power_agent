@@ -30,39 +30,45 @@ service.interceptors.response.use(
         }
       }
 
-      // 2. 遥测数据接口（监控面板用）
+      // 2. 遥测数据接口（监控面板用）- 与后端格式对齐
       if (url.includes('/telemetry/live')) {
+        const deviceId = res.config.params?.device_id || 'boiler_002'
+
+        const deviceDataMap = {
+          'boiler_002': {
+            device_status: { device_id: 'boiler_002', status: 'running' },
+            metrics: [
+              { key: 'steam_temp', name: '主蒸汽温度', unit: '℃', value: 72, level: 'normal' },
+              { key: 'steam_pressure', name: '主蒸汽压力', unit: 'MPa', value: 3.2, level: 'normal' },
+              { key: 'vibration', name: '轴承振动', unit: 'mm/s', value: 0.8, level: 'normal' },
+              { key: 'power', name: '功率', unit: 'MW', value: 2847, level: 'normal' }
+            ]
+          },
+          'turbine_003': {
+            device_status: { device_id: 'turbine_003', status: 'running' },
+            metrics: [
+              { key: 'steam_temp', name: '主蒸汽温度', unit: '℃', value: 68, level: 'normal' },
+              { key: 'steam_pressure', name: '主蒸汽压力', unit: 'MPa', value: 2.9, level: 'normal' },
+              { key: 'vibration', name: '轴承振动', unit: 'mm/s', value: 0.5, level: 'normal' },
+              { key: 'power', name: '功率', unit: 'MW', value: 3201, level: 'normal' }
+            ]
+          },
+          'generator_004': {
+            device_status: { device_id: 'generator_004', status: 'warning' },
+            metrics: [
+              { key: 'steam_temp', name: '主蒸汽温度', unit: '℃', value: 82, level: 'warning' },
+              { key: 'steam_pressure', name: '主蒸汽压力', unit: 'MPa', value: 3.8, level: 'warning' },
+              { key: 'vibration', name: '轴承振动', unit: 'mm/s', value: 1.2, level: 'warning' },
+              { key: 'power', name: '功率', unit: 'MW', value: 1523, level: 'warning' }
+            ]
+          }
+        }
+
+        const data = deviceDataMap[deviceId] || deviceDataMap['boiler_002']
         return {
           success: true,
-          data: [
-            {
-              device_id: 'dev_001',
-              device_name: '2号机组',
-              temperature: 72,
-              pressure: 3.2,
-              vibration: 0.8,
-              power: 2847,
-              status: 'normal'
-            },
-            {
-              device_id: 'dev_002',
-              device_name: '3号机组',
-              temperature: 68,
-              pressure: 2.9,
-              vibration: 0.5,
-              power: 3201,
-              status: 'normal'
-            },
-            {
-              device_id: 'dev_003',
-              device_name: '4号机组',
-              temperature: 82,
-              pressure: 3.8,
-              vibration: 1.2,
-              power: 1523,
-              status: 'warn'
-            }
-          ]
+          message: 'ok',
+          data: data
         }
       }
 
@@ -72,7 +78,7 @@ service.interceptors.response.use(
           success: true,
           data: {
             alarms: [
-              { id: 1, level: 'warn', message: '2号机组温度偏高' }
+              { id: 1, level: 'warning', message: '2号机组温度偏高' }
             ]
           }
         }
