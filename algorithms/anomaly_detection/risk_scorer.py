@@ -64,14 +64,6 @@ class RiskScorer:
     def _generate_recommendations(self, threshold_result: dict, trend_result: dict, risk_score: float) -> list:
         """
         生成建议措施
-        
-        参数:
-            threshold_result: dict - 阈值检测结果
-            trend_result: dict - 趋势检测结果
-            risk_score: float - 风险评分
-        
-        返回:
-            list - 建议措施列表
         """
         recommendations = []
         
@@ -103,12 +95,6 @@ class RiskScorer:
     def batch_score(self, records: list) -> list:
         """
         批量计算风险评分
-        
-        参数:
-            records: list - 检测记录列表
-        
-        返回:
-            list - 风险评分结果列表
         """
         results = []
         for record in records:

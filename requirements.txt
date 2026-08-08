@@ -6,14 +6,9 @@ uvicorn[standard]>=0.27.0
 python-dotenv>=1.0.0
 
 # Database
-psycopg2-binary>=2.9.0
 sqlalchemy>=2.0.0
 asyncpg>=0.29.0
-
-# Data Processing
-numpy>=1.24.0
-pandas>=2.0.0
-scikit-learn>=1.2.0
+psycopg2-binary>=2.9.0
 
 # Agent
 langchain>=0.1.0
@@ -24,6 +19,9 @@ openai>=1.10.0
 # RAG
 faiss-cpu>=1.7.4
 sentence-transformers>=2.3.0
+langchain-text-splitters>=0.3.0
 
-# Prediction
-prophet>=1.1.0
+# Data Processing
+numpy>=1.24.0
+pandas>=2.0.0
+scikit-learn>=1.2.0

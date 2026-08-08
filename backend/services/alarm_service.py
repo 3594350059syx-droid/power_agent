@@ -122,9 +122,6 @@ def get_alarm_history(device_id: str, hours: int = 24, status: str = None) -> li
         device_id: str - 设备编码（英文ID或中文名均可）
         hours: int - 查询时长（小时）
         status: str - 告警状态过滤（可选）
-    
-    返回:
-        list - 告警记录列表
     """
     db = next(get_db())
     try:
@@ -172,12 +169,6 @@ def get_alarm_history(device_id: str, hours: int = 24, status: str = None) -> li
 def acknowledge_alarm(alarm_id: int) -> bool:
     """
     确认告警
-    
-    参数:
-        alarm_id: int - 告警ID
-    
-    返回:
-        bool - 是否确认成功
     """
     db = next(get_db())
     try:
@@ -194,9 +185,6 @@ def acknowledge_alarm(alarm_id: int) -> bool:
 def get_all_pending_alarms() -> list:
     """
     获取所有待处理告警
-    
-    返回:
-        list - 待处理告警列表
     """
     db = next(get_db())
     try:

@@ -1,14 +1,21 @@
+"""
+告警检测 Tool — B 的真实实现
+P0-4: 异常检测算法，对接阈值检测 + 趋势检测 + 风险评分
+
+B 完成实现后，由 __init__.py 自动选择真实实现（数据库可用时）
+或降级为 mock（alarm_tool_mock）。
+"""
 from backend.services.alarm_service import analyze_device_anomalies, get_alarm_history, get_all_pending_alarms, acknowledge_alarm
 
 
 def alarm_tool(device_id: str, hours: int = 24) -> dict:
     """
     告警检测工具函数
-    
+
     参数:
         device_id: str - 设备编码（英文ID如 "boiler_002", "turbine_003", "generator_004"，或中文名如 "2号锅炉"）
         hours: int - 分析时长（小时），默认为 24 小时
-    
+
     返回:
         dict - 告警检测结果
             - device_id: str - 设备编码
@@ -34,12 +41,12 @@ def alarm_tool(device_id: str, hours: int = 24) -> dict:
 def alarm_history_tool(device_id: str, hours: int = 24, status: str = None) -> list:
     """
     获取告警历史记录工具
-    
+
     参数:
         device_id: str - 设备编码（英文ID或中文名）
         hours: int - 查询时长（小时）
         status: str - 告警状态过滤（可选：'pending', 'acknowledged'）
-    
+
     返回:
         list - 告警历史记录列表
     """
@@ -49,7 +56,7 @@ def alarm_history_tool(device_id: str, hours: int = 24, status: str = None) -> l
 def pending_alarms_tool() -> list:
     """
     获取所有待处理告警工具
-    
+
     返回:
         list - 待处理告警列表
     """
@@ -59,10 +66,10 @@ def pending_alarms_tool() -> list:
 def acknowledge_alarm_tool(alarm_id: int) -> dict:
     """
     确认告警工具
-    
+
     参数:
         alarm_id: int - 告警ID
-    
+
     返回:
         dict - 确认结果
     """
