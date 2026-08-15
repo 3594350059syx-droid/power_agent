@@ -59,7 +59,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import DeviceCard from '@/components/DeviceCard.vue'
@@ -118,7 +118,6 @@ const fetchAllDevices = async () => {
   } catch (error) {
     console.error('获取监控数据失败:', error)
     isConnected.value = false
-    // 只在第一次失败时提示，避免反复弹窗
     if (devices.value.length === 0) {
       ElMessage.error('连接监控服务失败，请检查后端是否运行')
     }
@@ -136,7 +135,9 @@ const refreshData = async () => {
 const startPolling = () => {
   if (refreshTimer) clearInterval(refreshTimer)
   refreshTimer = setInterval(() => {
-    fetchAllDevices()
+    if (!isLoading.value) {
+      fetchAllDevices()
+    }
   }, 3000)
 }
 

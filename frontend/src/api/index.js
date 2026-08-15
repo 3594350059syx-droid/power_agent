@@ -38,28 +38,34 @@ service.interceptors.response.use(
           'boiler_002': {
             device_status: { device_id: 'boiler_002', status: 'running' },
             metrics: [
-              { key: 'steam_temp', name: '主蒸汽温度', unit: '℃', value: 72, level: 'normal' },
-              { key: 'steam_pressure', name: '主蒸汽压力', unit: 'MPa', value: 3.2, level: 'normal' },
-              { key: 'vibration', name: '轴承振动', unit: 'mm/s', value: 0.8, level: 'normal' },
-              { key: 'power', name: '功率', unit: 'MW', value: 2847, level: 'normal' }
+              { key: 'steam_temp', name: '主蒸汽温度', unit: '℃', value: 72, level: 'normal', normal_range: [535, 550] },
+              { key: 'steam_pressure', name: '主蒸汽压力', unit: 'MPa', value: 3.2, level: 'normal', normal_range: [15.5, 17.5] },
+              { key: 'furnace_temp', name: '炉膛温度', unit: '℃', value: 1120, level: 'normal', normal_range: [1000, 1250] },
+              { key: 'vibration', name: '轴承振动', unit: 'mm/s', value: 0.8, level: 'normal', normal_range: [0, 4.5] },
+              { key: 'lube_oil_temp', name: '润滑油温度', unit: '℃', value: 42, level: 'normal', normal_range: [35, 50] },
+              { key: 'feedwater_flow', name: '给水流量', unit: 't/h', value: 240, level: 'normal', normal_range: [200, 280] }
             ]
           },
           'turbine_003': {
             device_status: { device_id: 'turbine_003', status: 'running' },
             metrics: [
-              { key: 'steam_temp', name: '主蒸汽温度', unit: '℃', value: 68, level: 'normal' },
-              { key: 'steam_pressure', name: '主蒸汽压力', unit: 'MPa', value: 2.9, level: 'normal' },
-              { key: 'vibration', name: '轴承振动', unit: 'mm/s', value: 0.5, level: 'normal' },
-              { key: 'power', name: '功率', unit: 'MW', value: 3201, level: 'normal' }
+              { key: 'steam_temp', name: '主蒸汽温度', unit: '℃', value: 68, level: 'normal', normal_range: [535, 550] },
+              { key: 'steam_pressure', name: '主蒸汽压力', unit: 'MPa', value: 2.9, level: 'normal', normal_range: [15.5, 17.5] },
+              { key: 'furnace_temp', name: '炉膛温度', unit: '℃', value: 1080, level: 'normal', normal_range: [1000, 1250] },
+              { key: 'vibration', name: '轴承振动', unit: 'mm/s', value: 0.5, level: 'normal', normal_range: [0, 4.5] },
+              { key: 'lube_oil_temp', name: '润滑油温度', unit: '℃', value: 38, level: 'normal', normal_range: [35, 50] },
+              { key: 'feedwater_flow', name: '给水流量', unit: 't/h', value: 220, level: 'normal', normal_range: [200, 280] }
             ]
           },
           'generator_004': {
-            device_status: { device_id: 'generator_004', status: 'warning' },
+            device_status: { device_id: 'generator_004', status: 'warn' },
             metrics: [
-              { key: 'steam_temp', name: '主蒸汽温度', unit: '℃', value: 82, level: 'warning' },
-              { key: 'steam_pressure', name: '主蒸汽压力', unit: 'MPa', value: 3.8, level: 'warning' },
-              { key: 'vibration', name: '轴承振动', unit: 'mm/s', value: 1.2, level: 'warning' },
-              { key: 'power', name: '功率', unit: 'MW', value: 1523, level: 'warning' }
+              { key: 'steam_temp', name: '主蒸汽温度', unit: '℃', value: 82, level: 'warn', normal_range: [535, 550] },
+              { key: 'steam_pressure', name: '主蒸汽压力', unit: 'MPa', value: 3.8, level: 'warn', normal_range: [15.5, 17.5] },
+              { key: 'furnace_temp', name: '炉膛温度', unit: '℃', value: 95, level: 'warn', normal_range: [1000, 1250] },
+              { key: 'vibration', name: '轴承振动', unit: 'mm/s', value: 1.2, level: 'warn', normal_range: [0, 4.5] },
+              { key: 'lube_oil_temp', name: '润滑油温度', unit: '℃', value: 55, level: 'warn', normal_range: [35, 50] },
+              { key: 'feedwater_flow', name: '给水流量', unit: 't/h', value: 180, level: 'warn', normal_range: [200, 280] }
             ]
           }
         }
