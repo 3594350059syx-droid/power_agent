@@ -1,3 +1,7 @@
+-- 启用 TimescaleDB 扩展（docker-entrypoint-initdb.d/ 执行的首个脚本必须先加载扩展，
+-- 否则 SELECT create_hypertable(...) 会报 "function does not exist"，导致一键部署失败）
+CREATE EXTENSION IF NOT EXISTS timescaledb;
+
 CREATE TABLE device (
     id SERIAL PRIMARY KEY,
     device_code VARCHAR(50) UNIQUE NOT NULL,

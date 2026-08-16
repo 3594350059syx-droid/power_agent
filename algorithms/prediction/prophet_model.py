@@ -157,13 +157,33 @@ class TimeSeriesPredictor:
 
     @classmethod
     def load(cls, filepath: str):
-        """从文件加载模型"""
+        """
+        从文件加载模型。
+
+        跨环境兼容：若 pickle 中保存的 model_type='prophet' 但当前环境 PROPHET_AVAILABLE=False，
+        直接 cls('prophet') → ImportError；改为抛 ImportError 由上层捕获并触发重训，
+        或返回 None 让调用方降级（predict_parameter 里已 try/except 保护）。
+        """
         with open(filepath, 'rb') as f:
             data = pickle.load(f)
 
-        instance = cls(model_type=data['model_type'])
+        saved_model_type = data.get('model_type', 'sklearn')
+        # 环境不兼容（有 prophet 环境训练 → 无 prophet 环境加载）
+        if saved_model_type == 'prophet' and not PROPHET_AVAILABLE:
+            raise ImportError(
+                f"Model at {filepath} was saved with prophet, but prophet is not installed. "
+                f"Re-train or install prophet to load."
+            )
+
+        try:
+            instance = cls(model_type=saved_model_type)
+        except ImportError:
+            # 其他原因（例：model_type 硬编码 'prophet' 但 prophet 缺失）
+            raise ImportError(
+                f"Cannot instantiate predictor with model_type={saved_model_type} in current env."
+            )
         instance.model = data['model']
-        instance._poly_features = data['poly_features']
+        instance._poly_features = data.get('poly_features')
         return instance
 
     def evaluate(self, test_df: pd.DataFrame) -> dict:

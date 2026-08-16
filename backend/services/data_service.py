@@ -26,18 +26,6 @@ def resolve_param_name(parameter: str) -> str:
     return PARAM_MAP.get(parameter, parameter)
 
 
-def get_device_id_by_code_or_name(identifier: str) -> int:
-    db = next(get_db())
-    try:
-        device = db.query(Device).filter_by(device_code=identifier).first()
-        if device:
-            return device.id
-        device = db.query(Device).filter_by(device_name=identifier).first()
-        return device.id if device else None
-    finally:
-        db.close()
-
-
 def get_device_by_code_or_name(db: Session, identifier: str) -> Device:
     device = db.query(Device).filter_by(device_code=identifier).first()
     if device:
@@ -60,18 +48,31 @@ def query_timeseries_data(params: dict) -> dict:
     parameter = params.get('parameter', '')
     start_time = params.get('start_time')
     end_time = params.get('end_time')
+    time_range_hours = params.get('time_range_hours', None)
     aggregation = params.get('aggregation', None)
-    
+
     db = next(get_db())
     try:
         device = get_device_by_code_or_name(db, device_id)
         if not device:
             return {'error': f"Device '{device_id}' not found"}
-        
+
         sensor = get_sensor_info(db, device.id, parameter)
         if not sensor:
             return {'error': f"Parameter '{parameter}' not found for device '{device.device_code}'"}
-        
+
+        # 兼容两种传参方式：优先显式 start_time/end_time；未传时用 time_range_hours 推导
+        end_dt = None
+        start_dt = None
+        if end_time:
+            end_dt = datetime.fromisoformat(end_time)
+        if start_time:
+            start_dt = datetime.fromisoformat(start_time)
+        elif time_range_hours is not None:
+            # 以"当前"为锚点向后推 time_range_hours（与 mock 行为一致：过去 N 小时）
+            end_dt = end_dt or datetime.now()
+            start_dt = end_dt - timedelta(hours=time_range_hours)
+
         query = db.query(
             TimeseriesData.recorded_at,
             TimeseriesData.value
@@ -79,13 +80,10 @@ def query_timeseries_data(params: dict) -> dict:
             TimeseriesData.device_id == device.id,
             TimeseriesData.sensor_id == sensor.id
         )
-        
-        if start_time:
-            start_dt = datetime.fromisoformat(start_time)
+
+        if start_dt:
             query = query.filter(TimeseriesData.recorded_at >= start_dt)
-        
-        if end_time:
-            end_dt = datetime.fromisoformat(end_time)
+        if end_dt:
             query = query.filter(TimeseriesData.recorded_at <= end_dt)
         
         resolved_param = resolve_param_name(parameter)
@@ -99,7 +97,7 @@ def query_timeseries_data(params: dict) -> dict:
         else:
             rows = query.order_by(TimeseriesData.recorded_at).all()
             data = [{'time': row.recorded_at.isoformat(), 'value': row.value} for row in rows]
-            
+
             stats_query = db.query(
                 func.min(TimeseriesData.value),
                 func.max(TimeseriesData.value),
@@ -109,13 +107,14 @@ def query_timeseries_data(params: dict) -> dict:
                 TimeseriesData.device_id == device.id,
                 TimeseriesData.sensor_id == sensor.id
             )
-            
-            if start_time:
+
+            if start_dt:
                 stats_query = stats_query.filter(TimeseriesData.recorded_at >= start_dt)
-            if end_time:
+            if end_dt:
                 stats_query = stats_query.filter(TimeseriesData.recorded_at <= end_dt)
-            
+
             stats_result = stats_query.first()
+            # 注意：不能用 "if stats_result[0]" 判断 None，否则恰为 0 的合法值会被误判为 None
             result = {
                 'device_id': device.device_code,
                 'device_name': device.device_name,
@@ -123,10 +122,10 @@ def query_timeseries_data(params: dict) -> dict:
                 'unit': sensor.unit,
                 'data': data,
                 'stats': {
-                    'min': round(stats_result[0], 2) if stats_result[0] else None,
-                    'max': round(stats_result[1], 2) if stats_result[1] else None,
-                    'avg': round(stats_result[2], 2) if stats_result[2] else None,
-                    'count': stats_result[3] if stats_result[3] else 0
+                    'min': round(stats_result[0], 2) if stats_result[0] is not None else None,
+                    'max': round(stats_result[1], 2) if stats_result[1] is not None else None,
+                    'avg': round(stats_result[2], 2) if stats_result[2] is not None else None,
+                    'count': stats_result[3] if stats_result[3] is not None else 0,
                 }
             }
         
@@ -158,10 +157,10 @@ def aggregate_query(query, aggregation: str):
     rows = bucketed_query.all()
     data = [{
         'time': row.bucket.isoformat(),
-        'value': round(row.avg_value, 2) if row.avg_value else None,
-        'min': round(row.min_value, 2) if row.min_value else None,
-        'max': round(row.max_value, 2) if row.max_value else None,
-        'count': row.count if row.count else 0
+        'value': round(row.avg_value, 2) if row.avg_value is not None else None,
+        'min': round(row.min_value, 2) if row.min_value is not None else None,
+        'max': round(row.max_value, 2) if row.max_value is not None else None,
+        'count': row.count if row.count is not None else 0,
     } for row in rows]
     
     return {

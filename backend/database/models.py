@@ -32,13 +32,15 @@ class SensorPoint(Base):
 class TimeseriesData(Base):
     __tablename__ = "timeseries_data"
 
-    # 与 init.sql 的 BIGSERIAL 一致，使用 64 位整型，避免 32 位 Integer 溢出
+    # 与 init.sql 对齐：BIGSERIAL + 复合主键 (id, recorded_at)
+    # 原因：TimescaleDB hypertable 要求唯一约束/主键必须包含分区列 recorded_at。
+    # 注意：BIGSERIAL 自身就是自增 64 位整型，即使在复合主键中也能正常 nextval。
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     device_id = Column(Integer, ForeignKey("device.id"))
     sensor_id = Column(Integer, ForeignKey("sensor_point.id"))
     value = Column(Double, nullable=False)
     quality = Column(String(10), default="good")
-    recorded_at = Column(DateTime(timezone=True), nullable=False)
+    recorded_at = Column(DateTime(timezone=True), nullable=False, primary_key=True)
 
 
 class AlarmRecord(Base):

@@ -66,6 +66,9 @@ def predict_tool_mock(
     Mock: 预测设备参数未来走势
 
     与 real predict_tool 签名一致: (device_id, parameter, hours)。
+    响应字段与 real predict_parameter 对齐：
+      - trend: 'rising' / 'falling' / 'stable'（英文枚举，非中文）
+      - 补充 confidence / last_actual_value / last_predicted_value / model_type
     """
     param_config = {
         "steam_temp":     {"unit": "\u2103",  "base": 540,  "trend": 0.8},
@@ -85,13 +88,37 @@ def predict_tool_mock(
     for i in range(1, hours + 1):
         t = now + timedelta(hours=i)
         value = round(cfg["base"] + cfg["trend"] * i, 2)
-        predictions.append({"time": t.strftime("%Y-%m-%dT%H:%M:%S"), "value": value})
+        # mock 区间宽度按 ±2% 模拟，与 real 的 lower/upper 字段匹配
+        band = max(abs(value) * 0.02, 0.01)
+        predictions.append({
+            "time": t.strftime("%Y-%m-%dT%H:%M:%S"),
+            "value": value,
+            "lower": round(value - band, 2),
+            "upper": round(value + band, 2),
+        })
+
+    # trend 英文枚举，与 real 的 _calculate_trend 输出一致
+    if cfg["trend"] > 0.02:
+        trend_en = "rising"
+    elif cfg["trend"] < -0.02:
+        trend_en = "falling"
+    else:
+        trend_en = "stable"
+
+    last_actual = round(cfg["base"] + random.uniform(-1, 1) * max(abs(cfg["base"]) * 0.01, 0.01), 2)
+    last_predicted = predictions[-1]["value"] if predictions else cfg["base"]
 
     return {
         "device_id": device_id,
+        "device_name": device_id,  # mock 简化：同 device_id
         "parameter": parameter,
         "unit": cfg["unit"],
         "predictions": predictions,
-        "trend": "\u4e0a\u5347" if cfg["trend"] > 0 else "\u4e0b\u964d",
-        "forecast_hours": hours,
+        "trend": trend_en,
+        "confidence": 0.88,
+        "last_actual_value": last_actual,
+        "last_predicted_value": last_predicted,
+        "prediction_hours": hours,
+        "model_type": "sklearn",
+        "generated_at": now.isoformat(),
     }
