@@ -7,7 +7,7 @@
         router
         class="menu"
       >
-        <el-menu-item index="/monitor">
+        <el-menu-item index="/dashboard">
           <el-icon><DataBoard /></el-icon>
           <span>监控面板</span>
         </el-menu-item>

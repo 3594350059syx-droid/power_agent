@@ -98,6 +98,9 @@ const processDeviceData = (deviceId, deviceName, response) => {
 
 // ============ 获取数据 ============
 const fetchAllDevices = async () => {
+  if (isLoading.value) return
+  isLoading.value = true
+
   try {
     const ids = DEVICE_CONFIG.map(d => d.id)
     const results = await getMultipleDevicesTelemetry(ids)
@@ -121,23 +124,20 @@ const fetchAllDevices = async () => {
     if (devices.value.length === 0) {
       ElMessage.error('连接监控服务失败，请检查后端是否运行')
     }
+  } finally {
+    isLoading.value = false
   }
 }
 
 // ============ 刷新控制 ============
 const refreshData = async () => {
-  if (isLoading.value) return
-  isLoading.value = true
   await fetchAllDevices()
-  isLoading.value = false
 }
 
 const startPolling = () => {
   if (refreshTimer) clearInterval(refreshTimer)
   refreshTimer = setInterval(() => {
-    if (!isLoading.value) {
-      fetchAllDevices()
-    }
+    fetchAllDevices()
   }, 3000)
 }
 

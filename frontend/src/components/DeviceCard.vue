@@ -6,7 +6,7 @@
         <span class="device-name">{{ deviceName || `设备 ${deviceId}` }}</span>
       </div>
       <el-tag :type="statusTagType" size="small">
-        {{ deviceStatus || '运行中' }}
+        {{ statusLabel }}
       </el-tag>
     </div>
 
@@ -49,9 +49,20 @@ const statusTagType = computed(() => {
   const map = {
     running: 'success',
     stopped: 'danger',
-    warning: 'warning'
+    warning: 'warning',
+    warn: 'warning'
   }
   return map[props.deviceStatus?.toLowerCase()] || 'success'
+})
+
+const statusLabel = computed(() => {
+  const map = {
+    running: '运行中',
+    stopped: '已停止',
+    warning: '警告',
+    warn: '警告'
+  }
+  return map[props.deviceStatus?.toLowerCase()] || props.deviceStatus || '运行中'
 })
 </script>
 

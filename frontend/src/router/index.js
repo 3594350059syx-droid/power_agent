@@ -8,12 +8,12 @@ const routes = [
     children: [
       {
         path: '',
-        redirect: '/monitor'
+        redirect: '/dashboard'
       },
       {
-        path: '/monitor',
-        name: 'Monitor',
-        component: () => import('@/views/Monitor.vue'),
+        path: '/dashboard',
+        name: 'Dashboard',
+        component: () => import('@/views/Dashboard.vue'),
         meta: { title: '监控面板' }
       },
       {
