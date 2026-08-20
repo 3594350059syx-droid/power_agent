@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from sqlalchemy import func, extract, and_
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.database.models import Device, SensorPoint, TimeseriesData
@@ -43,6 +43,20 @@ def get_sensor_info(db: Session, device_id: int, parameter: str):
     return sensor
 
 
+def _empty_result(device_id: str = '', parameter: str = '', error: str = None) -> dict:
+    """Week 2 契约：无匹配数据时返回空数组而非异常，同时附带 error 供调试"""
+    result = {
+        'device_id': device_id,
+        'parameter': parameter,
+        'unit': '',
+        'data': [],
+        'stats': {'min': None, 'max': None, 'avg': None, 'count': 0},
+    }
+    if error:
+        result['error'] = error
+    return result
+
+
 def query_timeseries_data(params: dict) -> dict:
     device_id = params.get('device_id', '')
     parameter = params.get('parameter', '')
@@ -55,11 +69,12 @@ def query_timeseries_data(params: dict) -> dict:
     try:
         device = get_device_by_code_or_name(db, device_id)
         if not device:
-            return {'error': f"Device '{device_id}' not found"}
+            return _empty_result(device_id, parameter, f"Device '{device_id}' not found")
 
         sensor = get_sensor_info(db, device.id, parameter)
         if not sensor:
-            return {'error': f"Parameter '{parameter}' not found for device '{device.device_code}'"}
+            return _empty_result(device.device_code, parameter,
+                                 f"Parameter '{parameter}' not found for device '{device.device_code}'")
 
         # 兼容两种传参方式：优先显式 start_time/end_time；未传时用 time_range_hours 推导
         end_dt = None
@@ -69,9 +84,13 @@ def query_timeseries_data(params: dict) -> dict:
         if start_time:
             start_dt = datetime.fromisoformat(start_time)
         elif time_range_hours is not None:
-            # 以"当前"为锚点向后推 time_range_hours（与 mock 行为一致：过去 N 小时）
             end_dt = end_dt or datetime.now()
             start_dt = end_dt - timedelta(hours=time_range_hours)
+
+        resolved_param = resolve_param_name(parameter)
+
+        if aggregation:
+            return aggregate_query(db, device, sensor, start_dt, end_dt, aggregation, resolved_param)
 
         query = db.query(
             TimeseriesData.recorded_at,
@@ -85,76 +104,77 @@ def query_timeseries_data(params: dict) -> dict:
             query = query.filter(TimeseriesData.recorded_at >= start_dt)
         if end_dt:
             query = query.filter(TimeseriesData.recorded_at <= end_dt)
-        
-        resolved_param = resolve_param_name(parameter)
-        
-        if aggregation:
-            result = aggregate_query(query, aggregation)
-            result['device_id'] = device.device_code
-            result['device_name'] = device.device_name
-            result['parameter'] = resolved_param
-            return result
-        else:
-            rows = query.order_by(TimeseriesData.recorded_at).all()
-            data = [{'time': row.recorded_at.isoformat(), 'value': row.value} for row in rows]
 
-            stats_query = db.query(
-                func.min(TimeseriesData.value),
-                func.max(TimeseriesData.value),
-                func.avg(TimeseriesData.value),
-                func.count(TimeseriesData.value)
-            ).filter(
-                TimeseriesData.device_id == device.id,
-                TimeseriesData.sensor_id == sensor.id
-            )
+        rows = query.order_by(TimeseriesData.recorded_at).all()
+        data = [{'time': row.recorded_at.isoformat(), 'value': row.value} for row in rows]
 
-            if start_dt:
-                stats_query = stats_query.filter(TimeseriesData.recorded_at >= start_dt)
-            if end_dt:
-                stats_query = stats_query.filter(TimeseriesData.recorded_at <= end_dt)
+        stats_query = db.query(
+            func.min(TimeseriesData.value),
+            func.max(TimeseriesData.value),
+            func.avg(TimeseriesData.value),
+            func.count(TimeseriesData.value)
+        ).filter(
+            TimeseriesData.device_id == device.id,
+            TimeseriesData.sensor_id == sensor.id
+        )
 
-            stats_result = stats_query.first()
-            # 注意：不能用 "if stats_result[0]" 判断 None，否则恰为 0 的合法值会被误判为 None
-            result = {
-                'device_id': device.device_code,
-                'device_name': device.device_name,
-                'parameter': resolved_param,
-                'unit': sensor.unit,
-                'data': data,
-                'stats': {
-                    'min': round(stats_result[0], 2) if stats_result[0] is not None else None,
-                    'max': round(stats_result[1], 2) if stats_result[1] is not None else None,
-                    'avg': round(stats_result[2], 2) if stats_result[2] is not None else None,
-                    'count': stats_result[3] if stats_result[3] is not None else 0,
-                }
+        if start_dt:
+            stats_query = stats_query.filter(TimeseriesData.recorded_at >= start_dt)
+        if end_dt:
+            stats_query = stats_query.filter(TimeseriesData.recorded_at <= end_dt)
+
+        stats_result = stats_query.first()
+        # 不能用 "if stats_result[0]" 判断 None，否则恰为 0 的合法值会被误判为 None
+        return {
+            'device_id': device.device_code,
+            'device_name': device.device_name,
+            'parameter': resolved_param,
+            'unit': sensor.unit,
+            'data': data,
+            'stats': {
+                'min': round(stats_result[0], 2) if stats_result[0] is not None else None,
+                'max': round(stats_result[1], 2) if stats_result[1] is not None else None,
+                'avg': round(stats_result[2], 2) if stats_result[2] is not None else None,
+                'count': stats_result[3] if stats_result[3] is not None else 0,
             }
-        
-        return result
-    
+        }
+
     finally:
         db.close()
 
 
-def aggregate_query(query, aggregation: str):
+def aggregate_query(db, device, sensor, start_dt, end_dt, aggregation: str, resolved_param: str):
+    """
+    SQLAlchemy 2.x 兼容的聚合查询。
+    直接构建带 date_trunc 的聚合查询，避免已移除的子查询包装方法。
+    """
     interval_map = {
         '5min': '5 minutes',
         '15min': '15 minutes',
         '1h': '1 hour',
         '6h': '6 hours',
-        '1d': '1 day'
+        '1d': '1 day',
     }
-    
     interval = interval_map.get(aggregation, '1 hour')
-    
-    bucketed_query = query.from_self().with_entities(
-        func.date_trunc(interval, TimeseriesData.recorded_at).label('bucket'),
+
+    bucket = func.date_trunc(interval, TimeseriesData.recorded_at).label('bucket')
+    query = db.query(
+        bucket,
         func.avg(TimeseriesData.value).label('avg_value'),
         func.min(TimeseriesData.value).label('min_value'),
         func.max(TimeseriesData.value).label('max_value'),
-        func.count(TimeseriesData.value).label('count')
-    ).group_by('bucket').order_by('bucket')
-    
-    rows = bucketed_query.all()
+        func.count(TimeseriesData.value).label('count'),
+    ).filter(
+        TimeseriesData.device_id == device.id,
+        TimeseriesData.sensor_id == sensor.id,
+    )
+
+    if start_dt:
+        query = query.filter(TimeseriesData.recorded_at >= start_dt)
+    if end_dt:
+        query = query.filter(TimeseriesData.recorded_at <= end_dt)
+
+    rows = query.group_by(bucket).order_by(bucket).all()
     data = [{
         'time': row.bucket.isoformat(),
         'value': round(row.avg_value, 2) if row.avg_value is not None else None,
@@ -162,10 +182,17 @@ def aggregate_query(query, aggregation: str):
         'max': round(row.max_value, 2) if row.max_value is not None else None,
         'count': row.count if row.count is not None else 0,
     } for row in rows]
-    
+
     return {
+        'device_id': device.device_code,
+        'device_name': device.device_name,
+        'parameter': resolved_param,
+        'unit': sensor.unit,
         'data': data,
-        'aggregation': aggregation
+        'aggregation': aggregation,
+        'stats': {
+            'count': sum(r['count'] for r in data),
+        },
     }
 
 

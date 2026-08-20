@@ -1,77 +1,48 @@
-from datetime import datetime, timedelta
+"""
+异常场景注入器
+
+Week 2 规格：
+- 主蒸汽温度：540℃ 线性升至 575℃（触发 HIGH 告警，threshold_high=570）
+- 振动：0.03mm 持续升高至 0.12mm（触发 HIGH 告警，threshold_high=0.10）
+"""
+from datetime import timedelta
 
 
 def inject_steam_temp_rise(data: list, start_offset: int, duration_minutes: int):
+    """
+    主蒸汽温度线性上升（减温水阀故障）
+    540℃ → 575℃，线性变化（非三次缓动曲线）
+    """
     affected_points = []
+    base_time = data[0]['timestamp'] + timedelta(minutes=start_offset)
+    end_time = base_time + timedelta(minutes=duration_minutes)
+
     for item in data:
-        if item['point_name'] == 'steam_temp':
-            timestamp = item['timestamp']
-            base_time = data[0]['timestamp'] + timedelta(minutes=start_offset)
-            end_time = base_time + timedelta(minutes=duration_minutes)
-            
-            if base_time <= timestamp <= end_time:
-                elapsed = (timestamp - base_time).total_seconds() / 60
-                progress = elapsed / duration_minutes
-                item['value'] = 540 + 35 * (1 - (1 - progress) ** 3)
-                affected_points.append(item)
-    
+        if item['point_name'] != 'steam_temp':
+            continue
+        ts = item['timestamp']
+        if base_time <= ts <= end_time:
+            progress = (ts - base_time).total_seconds() / 60 / duration_minutes
+            item['value'] = round(540 + 35 * progress, 2)
+            affected_points.append(item)
     return affected_points
 
 
-def inject_vibration_spike(data: list, spike_minute: int):
+def inject_vibration_rise(data: list, start_offset: int, duration_minutes: int):
+    """
+    振动持续升高（轴承磨损加剧）
+    0.03mm → 0.12mm，线性持续 4 小时（非尖峰后衰减）
+    """
     affected_points = []
+    base_time = data[0]['timestamp'] + timedelta(minutes=start_offset)
+    end_time = base_time + timedelta(minutes=duration_minutes)
+
     for item in data:
-        if item['point_name'] == 'vibration':
-            timestamp = item['timestamp']
-            spike_time = data[0]['timestamp'] + timedelta(minutes=spike_minute)
-            window_start = spike_time - timedelta(minutes=5)
-            window_end = spike_time + timedelta(minutes=30)
-            
-            if window_start <= timestamp <= window_end:
-                distance = abs((timestamp - spike_time).total_seconds() / 60)
-                if distance <= 5:
-                    spike_magnitude = 1 - (distance / 5)
-                    item['value'] = 0.03 + spike_magnitude * 0.09
-                    affected_points.append(item)
-                elif distance <= 30:
-                    decay = 1 - (distance - 5) / 25
-                    item['value'] = 0.03 + decay * 0.03
-                    affected_points.append(item)
-    
-    return affected_points
-
-
-def inject_pressure_drop(data: list, start_offset: int, duration_minutes: int):
-    affected_points = []
-    for item in data:
-        if item['point_name'] == 'steam_pressure':
-            timestamp = item['timestamp']
-            base_time = data[0]['timestamp'] + timedelta(minutes=start_offset)
-            end_time = base_time + timedelta(minutes=duration_minutes)
-            
-            if base_time <= timestamp <= end_time:
-                elapsed = (timestamp - base_time).total_seconds() / 60
-                progress = elapsed / duration_minutes
-                drop_amount = 2.0 * (1 - (1 - progress) ** 2)
-                item['value'] = max(14.7, 16.7 - drop_amount)
-                affected_points.append(item)
-    
-    return affected_points
-
-
-def inject_stator_overheat(data: list, start_offset: int, duration_minutes: int):
-    affected_points = []
-    for item in data:
-        if item['point_name'] == 'stator_temp':
-            timestamp = item['timestamp']
-            base_time = data[0]['timestamp'] + timedelta(minutes=start_offset)
-            end_time = base_time + timedelta(minutes=duration_minutes)
-            
-            if base_time <= timestamp <= end_time:
-                elapsed = (timestamp - base_time).total_seconds() / 60
-                progress = elapsed / duration_minutes
-                # 注入上限提至 145℃，确保超过 stator_temp 的 threshold_high(140) 以触发阈值告警
-                item['value'] = 105 + 40 * (1 - (1 - progress) ** 2)
-                affected_points.append(item)
-    
+        if item['point_name'] != 'vibration':
+            continue
+        ts = item['timestamp']
+        if base_time <= ts <= end_time:
+            progress = (ts - base_time).total_seconds() / 60 / duration_minutes
+            item['value'] = round(0.03 + 0.09 * progress, 4)
+            affected_points.append(item)
     return affected_points
