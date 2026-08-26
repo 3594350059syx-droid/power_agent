@@ -37,7 +37,7 @@ def _generate_mock_metrics():
 
 
 @router.get("/telemetry/live")
-def get_live_telemetry(device_id: str = Query("dev_001", description="设备ID")):
+def get_live_telemetry(device_id: str = Query("boiler_002", description="设备ID（与 init.sql 设备表保持一致：boiler_002 / turbine_003 / generator_004）")):
     metrics = _generate_mock_metrics()
     return success_response(
         data={

@@ -18,7 +18,7 @@ class Settings:
     API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
     API_PORT: int = int(os.getenv("API_PORT", "8000"))
     API_V1_PREFIX: str = "/api/v1"
-    
+
     # ---------- Database ----------
     DB_HOST: str = os.getenv("DB_HOST", "localhost")
     DB_PORT: int = int(os.getenv("DB_PORT", "5432"))
@@ -48,3 +48,4 @@ class Settings:
 
 # 全局单例，其他模块直接 from backend.config.settings import settings
 settings = Settings()
+

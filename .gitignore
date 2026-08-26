@@ -20,8 +20,6 @@ pip-delete-this-directory.txt
 .coverage
 htmlcov/
 *.log
-*.pkl
-*.faiss
 
 # ====================
 # Node（前端）
@@ -56,42 +54,33 @@ dist-ssr/
 Thumbs.db
 
 # ====================
-# 数据文件
+# 数据文件（运行时产物，不忽略 data/mock/ 下的源代码）
 # ====================
-data/
-*.pkl
-*.faiss
 *.csv
 *.xlsx
 *.db
 data/database/*.db
+data/output/
 
 # ====================
-# 模型文件
+# 模型文件 / 序列化产物（运行时生成，不入库）
 # ====================
-models/checkpoints/*.pt
+*.pkl
+*.faiss
 *.pt
 *.pth
+models/checkpoints/
 
 # ====================
 # 输出目录
 # ====================
 output/
 docs/_build/
-# RAG index (runtime artifacts)
+
+# ====================
+# RAG 索引（运行时产物）
+# ====================
 rag/retriever/index/
-
-# ====================
-# 模型文件
-# ===========models/checkpoints/*.pt
-*.pt
-*.pth
-
-# ====================
-# 输出目录
-# ====================
-output/
-docs/_build/
 
 # ====================
 # Qoder

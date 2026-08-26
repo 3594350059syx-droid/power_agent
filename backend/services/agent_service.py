@@ -77,10 +77,10 @@ def _extract_diagnosis(tool_results: dict[str, Any], params: dict) -> dict | Non
     risk_score = alarm_result.get("risk_score", 0)
     alarms = alarm_result.get("alarms", [])
 
-    # 风险等级
-    if risk_score >= 0.75:
+    # 风险等级（与 RiskScorer 阈值口径统一：0.3/0.6 分 low/medium/high）
+    if risk_score >= 0.6:
         risk_level = "high"
-    elif risk_score >= 0.5:
+    elif risk_score >= 0.3:
         risk_level = "medium"
     else:
         risk_level = "low"
