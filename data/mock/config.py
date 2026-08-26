@@ -41,19 +41,22 @@ SENSOR_POINTS = {
     ],
 }
 
-# 异常场景时间窗口（相对数据起点 start_time 的分钟偏移）
-# 严格按 Week 2 规格：
-#   - 主蒸汽温度：第 4 天 14:00-16:00（线性 540→575℃）
-#   - 振动：第 5 天 02:00-06:00（持续升高 0.03→0.12mm）
+# 异常场景日历窗口。day_offset 从数据首日（第 1 天）开始计数：
+# - 主蒸汽温度：第 4 天 14:00-16:00（线性 540→575℃）
+# - 振动：第 5 天 02:00-06:00（持续升高 0.03→0.12mm）
 ANOMALY_WINDOWS = {
     'steam_temp_rise': {
         'device_type': 'boiler',
-        'start_offset': 3 * 24 * 60 + 14 * 60,   # 第 4 天 14:00
-        'duration': 2 * 60,                       # 持续 2 小时
+        'day_offset': 3,
+        'start_hour': 14,
+        'start_minute': 0,
+        'duration': 2 * 60,
     },
     'vibration_rise': {
         'device_type': 'turbine',
-        'start_offset': 4 * 24 * 60 + 2 * 60,     # 第 5 天 02:00
-        'duration': 4 * 60,                       # 持续 4 小时
+        'day_offset': 4,
+        'start_hour': 2,
+        'start_minute': 0,
+        'duration': 4 * 60,
     },
 }

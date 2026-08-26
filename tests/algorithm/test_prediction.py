@@ -93,12 +93,48 @@ class TestSklearnFallback(unittest.TestCase):
         self.assertTrue(((forecast['yhat_lower'] <= forecast['yhat']) &
                          (forecast['yhat'] <= forecast['yhat_upper'])).all())
 
+    def test_sklearn_forecast_continues_linear_trend(self):
+        start = datetime(2026, 1, 1)
+        sample_count = 7 * 24 * 60
+        history = pd.DataFrame({
+            'ds': pd.to_datetime([start + timedelta(minutes=i) for i in range(sample_count)]),
+            'y': 100 + 2 * np.arange(sample_count, dtype=float),
+        })
+        predictor = TimeSeriesPredictor(model_type='sklearn')
+        predictor.fit(history)
+
+        forecast = predictor.predict(history, periods=3, freq='1min')
+
+        np.testing.assert_allclose(
+            forecast['yhat'].values,
+            100 + 2 * np.arange(sample_count, sample_count + 3),
+            atol=1.0,
+        )
+        self.assertGreater(forecast['yhat'].iloc[0], history['y'].iloc[-1])
+
     def test_sklearn_evaluate(self):
         predictor = TimeSeriesPredictor(model_type='sklearn')
         predictor.fit(self.df)
         metrics = predictor.evaluate(self.df)
         self.assertIn('rmse', metrics)
         self.assertGreaterEqual(metrics['rmse'], 0.0)
+
+    def test_sklearn_evaluate_uses_training_time_origin(self):
+        start = datetime(2026, 1, 1)
+        train_count = 7 * 24 * 60
+        test_count = 24 * 60
+        full_df = pd.DataFrame({
+            'ds': pd.to_datetime([
+                start + timedelta(minutes=i) for i in range(train_count + test_count)
+            ]),
+            'y': 100 + 2 * np.arange(train_count + test_count, dtype=float),
+        })
+        predictor = TimeSeriesPredictor(model_type='sklearn')
+        predictor.fit(full_df.iloc[:train_count])
+
+        metrics = predictor.evaluate(full_df.iloc[train_count:])
+
+        self.assertLess(metrics['rmse'], 1.0)
 
     def test_save_load_roundtrip(self):
         import tempfile
@@ -109,9 +145,12 @@ class TestSklearnFallback(unittest.TestCase):
             predictor.save(fp)
             loaded = TimeSeriesPredictor.load(fp)
             self.assertEqual(loaded.model_type, 'sklearn')
-            # 加载后仍可预测
+            original_forecast = predictor.predict(self.df, periods=10, freq='1min')
+            # 加载后仍可预测，并且必须使用训练时持久化的时间原点。
             forecast = loaded.predict(self.df, periods=10, freq='1min')
             self.assertEqual(len(forecast), 10)
+            self.assertEqual(loaded._feature_time_origin, predictor._feature_time_origin)
+            np.testing.assert_allclose(forecast['yhat'].values, original_forecast['yhat'].values)
 
 
 class TestDataPreprocessing(unittest.TestCase):

@@ -1,8 +1,18 @@
 from datetime import datetime, timedelta
-from sqlalchemy import func
+from sqlalchemy import cast, func, literal
+from sqlalchemy.dialects.postgresql import INTERVAL
 from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.database.models import Device, SensorPoint, TimeseriesData
+
+AGGREGATION_INTERVALS = {
+    '5min': '5 minutes',
+    '15min': '15 minutes',
+    '1h': '1 hour',
+    '6h': '6 hours',
+    '1d': '1 day',
+}
+
 
 PARAM_MAP = {
     'speed': 'rpm',
@@ -146,18 +156,15 @@ def query_timeseries_data(params: dict) -> dict:
 def aggregate_query(db, device, sensor, start_dt, end_dt, aggregation: str, resolved_param: str):
     """
     SQLAlchemy 2.x 兼容的聚合查询。
-    直接构建带 date_trunc 的聚合查询，避免已移除的子查询包装方法。
+    直接构建 TimescaleDB time_bucket 聚合查询，避免已移除的子查询包装方法。
     """
-    interval_map = {
-        '5min': '5 minutes',
-        '15min': '15 minutes',
-        '1h': '1 hour',
-        '6h': '6 hours',
-        '1d': '1 day',
-    }
-    interval = interval_map.get(aggregation, '1 hour')
-
-    bucket = func.date_trunc(interval, TimeseriesData.recorded_at).label('bucket')
+    # date_trunc 只接受 minute/hour/day 等字段名，不能接受 '5 minutes' 这类
+    # 多单位间隔。timeseries_data 是 TimescaleDB hypertable，因此使用 time_bucket。
+    interval = AGGREGATION_INTERVALS.get(aggregation, AGGREGATION_INTERVALS['1h'])
+    bucket = func.time_bucket(
+        cast(literal(interval), INTERVAL()),
+        TimeseriesData.recorded_at,
+    ).label('bucket')
     query = db.query(
         bucket,
         func.avg(TimeseriesData.value).label('avg_value'),

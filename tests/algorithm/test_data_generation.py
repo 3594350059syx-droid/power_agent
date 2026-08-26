@@ -26,6 +26,7 @@ if _mock_dir not in sys.path:
 
 from config import DEVICES, SENSOR_POINTS, ANOMALY_WINDOWS
 from anomaly_scenarios import inject_steam_temp_rise, inject_vibration_rise
+from mock_utils import get_generation_start_time, inject_configured_anomalies
 from normal_pattern import (
     generate_normal_boiler_data,
     generate_normal_turbine_data,
@@ -34,7 +35,7 @@ from normal_pattern import (
 
 # backend 依赖 sqlalchemy + psycopg2，缺失时跳过相关测试
 try:
-    from backend.database.models import TimeseriesData, AlarmRecord
+    from backend.database.models import AlarmRecord, Device, DiagnosisResult, TimeseriesData
     from backend.services import data_service
     BACKEND_AVAILABLE = True
 except Exception:
@@ -63,11 +64,17 @@ class TestConfigContract(unittest.TestCase):
 
     def test_anomaly_windows_match_spec(self):
         steam = ANOMALY_WINDOWS['steam_temp_rise']
-        self.assertEqual(steam['start_offset'], 3 * 24 * 60 + 14 * 60)
+        self.assertEqual(
+            (steam['day_offset'], steam['start_hour'], steam['start_minute']),
+            (3, 14, 0),
+        )
         self.assertEqual(steam['duration'], 2 * 60)
 
         vib = ANOMALY_WINDOWS['vibration_rise']
-        self.assertEqual(vib['start_offset'], 4 * 24 * 60 + 2 * 60)
+        self.assertEqual(
+            (vib['day_offset'], vib['start_hour'], vib['start_minute']),
+            (4, 2, 0),
+        )
         self.assertEqual(vib['duration'], 4 * 60)
 
     def test_device_codes_no_hardcoded_ids(self):
@@ -137,6 +144,34 @@ class TestVibrationAnomaly(unittest.TestCase):
         self.assertGreaterEqual(peak, 0.10)
 
 
+class TestCalendarAnomalyWindows(unittest.TestCase):
+    """异常时间必须匹配文档中的墙钟窗口，而不依赖生成起点是否为午夜。"""
+
+    def test_non_midnight_start_uses_documented_steam_window(self):
+        start = datetime(2026, 8, 19, 13, 37, 52)
+        data = generate_normal_boiler_data(start, 7 * 24 * 60)
+        affected = inject_configured_anomalies('boiler', data, ANOMALY_WINDOWS)
+
+        window_start = datetime(2026, 8, 22, 14, 0)
+        window_end = datetime(2026, 8, 22, 16, 0)
+        self.assertEqual(affected[0]['timestamp'], datetime(2026, 8, 22, 14, 0, 52))
+        self.assertTrue(all(window_start <= point['timestamp'] <= window_end for point in affected))
+
+    def test_non_midnight_start_uses_documented_vibration_window(self):
+        start = datetime(2026, 8, 19, 13, 37, 52)
+        data = generate_normal_turbine_data(start, 7 * 24 * 60)
+        affected = inject_configured_anomalies('turbine', data, ANOMALY_WINDOWS)
+
+        window_start = datetime(2026, 8, 23, 2, 0)
+        window_end = datetime(2026, 8, 23, 6, 0)
+        self.assertEqual(affected[0]['timestamp'], datetime(2026, 8, 23, 2, 0, 52))
+        self.assertTrue(all(window_start <= point['timestamp'] <= window_end for point in affected))
+
+    def test_generation_start_is_midnight(self):
+        start = get_generation_start_time(datetime(2026, 8, 26, 13, 37, 52))
+        self.assertEqual(start, datetime(2026, 8, 19, 0, 0))
+
+
 class TestNormalPatternSensors(unittest.TestCase):
     """正常数据生成器：每设备 3 测点"""
 
@@ -164,18 +199,41 @@ class TestNormalPatternSensors(unittest.TestCase):
 class TestIdempotency(unittest.TestCase):
     """幂等性：重复运行先清空旧数据再插入"""
 
-    def test_clear_device_data_deletes_both_tables(self):
+    def test_clear_device_data_deletes_dependents_before_alarms(self):
         import generate_data
 
         session = MagicMock()
-        ts_chain = MagicMock()
-        alarm_chain = MagicMock()
-        session.query.side_effect = lambda arg: ts_chain if arg is TimeseriesData else alarm_chain
+        chains = {
+            DiagnosisResult: MagicMock(),
+            AlarmRecord: MagicMock(),
+            TimeseriesData: MagicMock(),
+        }
+        session.query.side_effect = lambda model: chains[model]
 
         generate_data.clear_device_data(session, [1, 2, 3])
 
-        ts_chain.filter.return_value.delete.assert_called_once()
-        alarm_chain.filter.return_value.delete.assert_called_once()
+        self.assertEqual(
+            [call.args[0] for call in session.query.call_args_list],
+            [DiagnosisResult, AlarmRecord, TimeseriesData],
+        )
+        for chain in chains.values():
+            chain.filter.return_value.delete.assert_called_once_with(synchronize_session=False)
+        session.commit.assert_called_once()
+
+    def test_get_mock_device_ids_uses_only_configured_device_codes(self):
+        import generate_data
+
+        session = MagicMock()
+        session.query.return_value.filter.return_value.all.return_value = [
+            MagicMock(id=11), MagicMock(id=12), MagicMock(id=13),
+        ]
+
+        self.assertEqual(generate_data.get_mock_device_ids(session), [11, 12, 13])
+        session.query.assert_called_once_with(Device)
+        session.query.return_value.filter.assert_called_once()
+        predicate = session.query.return_value.filter.call_args.args[0]
+        for device in DEVICES:
+            self.assertIn(device['code'], str(predicate.compile(compile_kwargs={'literal_binds': True})))
 
     @patch('generate_data.clear_device_data')
     @patch('generate_data.get_db')
@@ -212,6 +270,28 @@ class TestAggregateQuery(unittest.TestCase):
         params = list(sig.parameters.keys())
         self.assertIn('db', params)
         self.assertNotIn('query', params)
+
+    def test_every_supported_interval_uses_timescaledb_time_bucket(self):
+        from sqlalchemy import select
+        from sqlalchemy.dialects import postgresql
+
+        device = MagicMock(id=1, device_code='boiler_002', device_name='2号锅炉')
+        sensor = MagicMock(id=2, unit='℃')
+
+        for aggregation, expected_interval in data_service.AGGREGATION_INTERVALS.items():
+            with self.subTest(aggregation=aggregation):
+                db = MagicMock()
+                data_service.aggregate_query(
+                    db, device, sensor, None, None, aggregation, 'steam_temp'
+                )
+                bucket = db.query.call_args.args[0]
+                sql = str(select(bucket).compile(
+                    dialect=postgresql.dialect(), compile_kwargs={'literal_binds': True}
+                ))
+
+                self.assertIn('time_bucket', sql)
+                self.assertIn(expected_interval, sql)
+                self.assertNotIn('date_trunc', sql)
 
 
 @unittest.skipUnless(BACKEND_AVAILABLE, "backend dependencies (sqlalchemy/psycopg2) not installed")

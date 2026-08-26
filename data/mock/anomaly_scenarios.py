@@ -8,13 +8,20 @@ Week 2 规格：
 from datetime import timedelta
 
 
-def inject_steam_temp_rise(data: list, start_offset: int, duration_minutes: int):
+def inject_steam_temp_rise(
+    data: list,
+    start_offset: int,
+    duration_minutes: int,
+    window_start=None,
+):
     """
     主蒸汽温度线性上升（减温水阀故障）
     540℃ → 575℃，线性变化（非三次缓动曲线）
     """
     affected_points = []
-    base_time = data[0]['timestamp'] + timedelta(minutes=start_offset)
+    base_time = window_start or (
+        min(item['timestamp'] for item in data) + timedelta(minutes=start_offset)
+    )
     end_time = base_time + timedelta(minutes=duration_minutes)
 
     for item in data:
@@ -28,13 +35,20 @@ def inject_steam_temp_rise(data: list, start_offset: int, duration_minutes: int)
     return affected_points
 
 
-def inject_vibration_rise(data: list, start_offset: int, duration_minutes: int):
+def inject_vibration_rise(
+    data: list,
+    start_offset: int,
+    duration_minutes: int,
+    window_start=None,
+):
     """
     振动持续升高（轴承磨损加剧）
     0.03mm → 0.12mm，线性持续 4 小时（非尖峰后衰减）
     """
     affected_points = []
-    base_time = data[0]['timestamp'] + timedelta(minutes=start_offset)
+    base_time = window_start or (
+        min(item['timestamp'] for item in data) + timedelta(minutes=start_offset)
+    )
     end_time = base_time + timedelta(minutes=duration_minutes)
 
     for item in data:

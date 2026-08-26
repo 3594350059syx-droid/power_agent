@@ -3,8 +3,8 @@
 
 一键生成 7 天模拟数据并写入 TimescaleDB。
 
-幂等保证：重复运行时先按设备清空旧的 timeseries_data / alarm_record，
-再重新插入，不会产生重复数据。
+幂等保证：重复运行时仅清空本脚本管理设备的关联诊断、告警和时序数据，
+再重新插入，不会产生重复数据或影响其他设备。
 
 运行方式：
     python data/mock/generate_data.py
@@ -22,17 +22,20 @@ if _mock_dir not in sys.path:
     sys.path.insert(0, _mock_dir)
 
 from backend.database.connection import get_db
-from backend.database.models import Device, SensorPoint, TimeseriesData, AlarmRecord
+from backend.database.models import (
+    AlarmRecord,
+    Device,
+    DiagnosisResult,
+    SensorPoint,
+    TimeseriesData,
+)
 from config import DEVICES, SENSOR_POINTS, ANOMALY_WINDOWS
 from normal_pattern import (
     generate_normal_boiler_data,
     generate_normal_turbine_data,
     generate_normal_generator_data,
 )
-from anomaly_scenarios import (
-    inject_steam_temp_rise,
-    inject_vibration_rise,
-)
+from mock_utils import get_generation_start_time, inject_configured_anomalies
 
 
 def init_devices(db):
@@ -91,14 +94,32 @@ def init_sensor_points(db):
     print(f"Sensor points ready (newly created: {created})")
 
 
+def get_mock_device_ids(db) -> list:
+    """返回数据库中由当前 mock 配置管理的设备 ID。"""
+    device_codes = [device['code'] for device in DEVICES]
+    devices = db.query(Device).filter(Device.device_code.in_(device_codes)).all()
+    return [device.id for device in devices]
+
+
 def clear_device_data(db, device_ids: list):
-    """按设备清空旧的时序数据和告警记录，保证幂等"""
+    """按外键依赖顺序清空指定 mock 设备的数据，保证幂等。"""
     if not device_ids:
         return
-    db.query(TimeseriesData).filter(TimeseriesData.device_id.in_(device_ids)).delete(synchronize_session=False)
-    db.query(AlarmRecord).filter(AlarmRecord.device_id.in_(device_ids)).delete(synchronize_session=False)
+
+    # diagnosis_result.alarm_id 引用 alarm_record.id，必须先删除关联诊断。
+    # 同时按 device_id 限定范围，确保不影响非 mock 设备的数据，并清理 alarm_id
+    # 为空的 mock 诊断记录。
+    db.query(DiagnosisResult).filter(
+        DiagnosisResult.device_id.in_(device_ids)
+    ).delete(synchronize_session=False)
+    db.query(AlarmRecord).filter(
+        AlarmRecord.device_id.in_(device_ids)
+    ).delete(synchronize_session=False)
+    db.query(TimeseriesData).filter(
+        TimeseriesData.device_id.in_(device_ids)
+    ).delete(synchronize_session=False)
     db.commit()
-    print(f"Cleared old timeseries_data & alarm_record for devices {device_ids}")
+    print(f"Cleared old diagnosis_result, alarm_record & timeseries_data for devices {device_ids}")
 
 
 def generate_data_for_device(device_type: str, start_time: datetime, days: int = 7):
@@ -114,14 +135,7 @@ def generate_data_for_device(device_type: str, start_time: datetime, days: int =
 
 def inject_anomalies(device_type: str, data: list):
     """按 Week 2 规格注入异常场景，返回受影响的异常数据点列表"""
-    anomalies = []
-    if device_type == 'boiler':
-        w = ANOMALY_WINDOWS['steam_temp_rise']
-        anomalies.extend(inject_steam_temp_rise(data, w['start_offset'], w['duration']))
-    elif device_type == 'turbine':
-        w = ANOMALY_WINDOWS['vibration_rise']
-        anomalies.extend(inject_vibration_rise(data, w['start_offset'], w['duration']))
-    return anomalies
+    return inject_configured_anomalies(device_type, data, ANOMALY_WINDOWS)
 
 
 def write_data_to_db(db, device_id: int, data: list, sensor_map: dict):
@@ -195,11 +209,10 @@ def main():
         init_devices(db)
         init_sensor_points(db)
 
-        # 幂等：清空旧数据再插入
-        device_ids = [d.id for d in db.query(Device).all()]
-        clear_device_data(db, device_ids)
+        # 幂等：只清空由当前 mock 配置管理的设备，避免删除其他设备的业务数据。
+        clear_device_data(db, get_mock_device_ids(db))
 
-        start_time = datetime.now() - timedelta(days=7)
+        start_time = get_generation_start_time()
         total_records = 0
         total_anomalies = 0
 

@@ -31,6 +31,7 @@ class TimeSeriesPredictor:
         self.model_type = model_type
         self.model = None
         self._poly_features = None
+        self._feature_time_origin = None
 
         if model_type == 'prophet':
             if not PROPHET_AVAILABLE:
@@ -66,7 +67,8 @@ class TimeSeriesPredictor:
         self.model.fit(train_df)
 
     def _fit_sklearn(self, df: pd.DataFrame):
-        features = extract_features(df)
+        self._feature_time_origin = pd.Timestamp(df['ds'].iloc[0])
+        features = extract_features(df, time_origin=self._feature_time_origin)
         self._poly_features = PolynomialFeatures(degree=2, include_bias=False)
         X = self._poly_features.fit_transform(features.values)
         y = df['y'].values
@@ -115,13 +117,13 @@ class TimeSeriesPredictor:
         future_times = [last_time + timedelta(seconds=freq_seconds * (i + 1)) for i in range(periods)]
         future_df = pd.DataFrame({'ds': future_times})
 
-        features = extract_features(future_df)
+        features = extract_features(future_df, time_origin=self._feature_time_origin)
         X = self._poly_features.transform(features.values)
         yhat = self.model.predict(X)
 
         residuals_std = 0.0
         if len(df) > 10:
-            train_features = extract_features(df)
+            train_features = extract_features(df, time_origin=self._feature_time_origin)
             train_X = self._poly_features.transform(train_features.values)
             train_pred = self.model.predict(train_X)
             residuals_std = np.std(df['y'].values - train_pred)
@@ -152,7 +154,8 @@ class TimeSeriesPredictor:
             pickle.dump({
                 'model': self.model,
                 'model_type': self.model_type,
-                'poly_features': self._poly_features
+                'poly_features': self._poly_features,
+                'feature_time_origin': self._feature_time_origin,
             }, f)
 
     @classmethod
@@ -184,6 +187,11 @@ class TimeSeriesPredictor:
             )
         instance.model = data['model']
         instance._poly_features = data.get('poly_features')
+        instance._feature_time_origin = data.get('feature_time_origin')
+        if saved_model_type == 'sklearn' and instance._feature_time_origin is None:
+            raise ValueError(
+                f"Model at {filepath} predates continuous time features; re-train before loading."
+            )
         return instance
 
     def evaluate(self, test_df: pd.DataFrame) -> dict:
@@ -206,7 +214,7 @@ class TimeSeriesPredictor:
             y_true = test_df['y'].values
             y_pred = forecast['yhat'].values
         else:
-            features = extract_features(test_df)
+            features = extract_features(test_df, time_origin=self._feature_time_origin)
             X = self._poly_features.transform(features.values)
             y_true = test_df['y'].values
             y_pred = self.model.predict(X)
