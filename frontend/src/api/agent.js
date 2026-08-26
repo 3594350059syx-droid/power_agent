@@ -8,9 +8,20 @@ import request from '@/api/index'
  * @returns {Promise}
  */
 export function sendChatMessage(message, mode = 'chat') {
+  if (import.meta.env.VITE_USE_MOCK === 'true') {
+    return Promise.resolve({
+      success: true,
+      message: 'mock',
+      data: {
+        reply: `【Mock 模式】已收到您的问题：${message}`,
+        diagnosis: null
+      }
+    })
+  }
+
   return request({
     url: '/agent/chat',
     method: 'post',
-    data: { message , mode }
+    data: { message, mode }
   })
 }
