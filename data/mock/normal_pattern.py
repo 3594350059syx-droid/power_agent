@@ -15,7 +15,9 @@ def generate_normal_value(base: float, variance: float, hour: int = None) -> flo
     if hour is not None:
         diurnal_pattern = np.sin(2 * np.pi * hour / 24) * variance / 2
         value += diurnal_pattern
-    return round(value, 2)
+    # np.random.normal returns a NumPy scalar; convert it before handing values
+    # to SQLAlchemy/psycopg2, which expects a native Python numeric value.
+    return float(round(value, 2))
 
 
 def generate_normal_boiler_data(start_time: datetime, minutes: int):
