@@ -194,6 +194,10 @@ class TestNormalPatternSensors(unittest.TestCase):
         data = generate_normal_boiler_data(datetime(2026, 1, 1), 60)
         self.assertEqual(len(data), 180)
 
+    def test_generated_values_are_native_python_floats(self):
+        data = generate_normal_boiler_data(datetime(2026, 1, 1), 1)
+        self.assertTrue(all(type(item['value']) is float for item in data))
+
 
 @unittest.skipUnless(BACKEND_AVAILABLE, "backend dependencies (sqlalchemy/psycopg2) not installed")
 class TestIdempotency(unittest.TestCase):

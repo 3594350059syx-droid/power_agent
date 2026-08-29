@@ -147,7 +147,7 @@ def write_data_to_db(db, device_id: int, data: list, sensor_map: dict):
             records.append(TimeseriesData(
                 device_id=device_id,
                 sensor_id=sensor_id,
-                value=item['value'],
+                value=float(item['value']),
                 quality='good',
                 recorded_at=item['timestamp'],
             ))
@@ -192,8 +192,8 @@ def create_alarm_records(db, device_id: int, anomalies: list, sensor_map: dict):
             sensor_id=sensor_id,
             alarm_type='threshold',
             severity=severity,
-            current_value=item['value'],
-            threshold_value=threshold_value,
+            current_value=float(item['value']),
+            threshold_value=float(threshold_value),
             message=message,
             status='pending',
             triggered_at=item['timestamp'],

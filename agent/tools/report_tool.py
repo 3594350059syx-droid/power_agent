@@ -12,40 +12,40 @@ def report_tool_mock(diagnosis: dict) -> str:
     输入: diagnosis={"device_id": "...", "risk_score": 0.85, "causes": [...], "suggestions": [...]}
     输出: Markdown 字符串
     """
-    device_id = diagnosis.get("device_id", "\u672a\u77e5\u8bbe\u5907")
+    device_id = diagnosis.get("device_id", "未知设备")
     risk_score = diagnosis.get("risk_score", 0.0)
-    causes = diagnosis.get("causes", ["\u5f85\u5206\u6790"])
-    suggestions = diagnosis.get("suggestions", ["\u5f85\u751f\u6210"])
+    causes = diagnosis.get("causes", ["待分析"])
+    suggestions = diagnosis.get("suggestions", ["待生成"])
 
     # 风险等级
     if risk_score >= 0.75:
-        risk_level = "\u9ad8\u98ce\u9669"
+        risk_level = "高风险"
     elif risk_score >= 0.5:
-        risk_level = "\u4e2d\u98ce\u9669"
+        risk_level = "中风险"
     else:
-        risk_level = "\u4f4e\u98ce\u9669"
+        risk_level = "低风险"
 
-    md = f"""# \u8bbe\u5907\u8bca\u65ad\u62a5\u544a
+    md = f"""# 设备诊断报告
 
-## \u8bbe\u5907\u4fe1\u606f
-- \u8bbe\u5907 ID: `{device_id}`
-- \u8bca\u65ad\u65f6\u95f4: {diagnosis.get("diagnosis_time", "\u5f85\u586b\u5199")}
+## 设备信息
+- 设备 ID: `{device_id}`
+- 诊断时间: {diagnosis.get("diagnosis_time", "待填写")}
 
-## \u98ce\u9669\u8bc4\u4f30
-| \u6307\u6807 | \u503c |
+## 风险评估
+| 指标 | 值 |
 |------|------|
-| \u98ce\u9669\u8bc4\u5206 | {risk_score:.2f} |
-| \u98ce\u9669\u7b49\u7ea7 | {risk_level} |
+| 风险评分 | {risk_score:.2f} |
+| 风险等级 | {risk_level} |
 
-## \u5f02\u5e38\u539f\u56e0
+## 异常原因
 """
     for i, cause in enumerate(causes, 1):
         md += f"{i}. {cause}\n"
 
-    md += "\n## \u5904\u7f6e\u5efa\u8bae\n"
+    md += "\n## 处置建议\n"
     for i, suggestion in enumerate(suggestions, 1):
         md += f"{i}. {suggestion}\n"
 
-    md += f"\n---\n*Power-Agent \u667a\u80fd\u9884\u8b66\u7cfb\u7edf \u81ea\u52a8\u751f\u6210*\n"
+    md += f"\n---\n*Power-Agent 智能预警系统 自动生成*\n"
 
     return md
