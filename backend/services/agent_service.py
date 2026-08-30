@@ -210,6 +210,7 @@ def run_agent(message: str, mode: str = "chat") -> dict:
             "mode": str,                # 对话模式
             "chart_data": dict | None,  # 图表数据（时序数据）
             "diagnosis": dict | None,   # 诊断结果
+            "report": str | None,      # Markdown 诊断报告
             "tool_calls": list,         # Tool 调用记录
         }
     """
@@ -224,6 +225,11 @@ def run_agent(message: str, mode: str = "chat") -> dict:
     tool_results = state.get("tool_results", {})
     tool_calls = state.get("tool_calls", [])
     template_response = state.get("final_response", "")
+    report = state.get("report", "")
+    if not isinstance(report, str):
+        report = ""
+    if not report and isinstance(tool_results.get("report_tool"), str):
+        report = tool_results["report_tool"]
 
     # 提取结构化数据
     chart_data = _extract_chart_data(tool_results)
@@ -238,6 +244,7 @@ def run_agent(message: str, mode: str = "chat") -> dict:
         "mode": mode,
         "chart_data": chart_data,
         "diagnosis": diagnosis,
+        "report": report or None,
         "tool_calls": tool_calls,
     }
 

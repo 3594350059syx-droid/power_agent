@@ -11,6 +11,7 @@ P0-3: intent_router 接入 DeepSeek LLM，规则匹配作为降级
 未安装时降级为 SimpleAgent（纯 Python 状态机，接口一致）。
 """
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from agent.graph.state import AgentState
@@ -22,6 +23,7 @@ from agent.prompts.system_prompt import (
 )
 from agent.tools import call_tool
 from agent.tools.base import INTENT_TOOL_MAP
+from agent.tools.report_tool import build_diagnosis
 
 logger = logging.getLogger(__name__)
 
@@ -53,50 +55,92 @@ def intent_router(state: AgentState) -> AgentState:
 
 
 # ============================================================
-# 节点 2: tool_executor — 调用 Mock Tool
+# 节点 2: tool_executor — 并行调用独立 Tool
 # ============================================================
 
+def _invoke_tool(tool_name: str, params: dict[str, Any]) -> Any:
+    """按统一参数契约调用单个 Tool。"""
+    if tool_name == "data_tool":
+        return call_tool("data_tool", params=params)
+    if tool_name == "alarm_tool":
+        return call_tool(
+            "alarm_tool",
+            device_id=params.get("device_id", "boiler_002"),
+            hours=params.get("time_range_hours", 24),
+        )
+    if tool_name == "predict_tool":
+        return call_tool(
+            "predict_tool",
+            device_id=params.get("device_id", "boiler_002"),
+            parameter=params.get("parameter", "steam_temp"),
+            hours=params.get("time_range_hours", 6),
+        )
+    if tool_name == "rag_tool":
+        return call_tool(
+            "rag_tool",
+            query=f"{params.get('parameter', '')} 异常原因",
+            top_k=3,
+        )
+    raise ValueError(f"未知 Tool: {tool_name}")
+
+
+def _execute_independent_tools(
+    tool_names: list[str], params: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    """并行执行互不依赖的 Tool，并按声明顺序整理结果。"""
+    results: dict[str, Any] = {}
+    statuses: dict[str, dict[str, Any]] = {}
+    if not tool_names:
+        return results, statuses
+
+    with ThreadPoolExecutor(
+        max_workers=min(len(tool_names), 4), thread_name_prefix="agent-tool"
+    ) as executor:
+        future_to_name = {
+            executor.submit(_invoke_tool, tool_name, params): tool_name
+            for tool_name in tool_names
+        }
+        for future in as_completed(future_to_name):
+            tool_name = future_to_name[future]
+            try:
+                results[tool_name] = future.result()
+                statuses[tool_name] = {"tool": tool_name, "status": "success"}
+            except Exception as exc:
+                logger.error(f"[tool_executor] {tool_name} 调用失败: {exc}")
+                results[tool_name] = {"error": str(exc)}
+                statuses[tool_name] = {
+                    "tool": tool_name,
+                    "status": "error",
+                    "error": str(exc),
+                }
+
+    return (
+        {name: results[name] for name in tool_names if name in results},
+        {name: statuses[name] for name in tool_names if name in statuses},
+    )
+
+
 def tool_executor(state: AgentState) -> AgentState:
-    """
-    根据意图调用对应的 Tool（P0-2 阶段全部使用 mock）。
-    """
+    """并行调用独立 Tool，随后调用依赖诊断输入的报告 Tool。"""
     intent = state.get("intent", "chat")
     params = state.get("params", {})
     tool_names = INTENT_TOOL_MAP.get(intent, [])
+    tool_results, status_by_name = _execute_independent_tools(tool_names, params)
+    tool_calls = [status_by_name[name] for name in tool_names if name in status_by_name]
+    state["report"] = ""
 
-    tool_results: dict[str, Any] = {}
-    tool_calls: list[dict[str, Any]] = []
-
-    for tool_name in tool_names:
-        logger.info(f"[tool_executor] 调用 {tool_name}")
-
+    if intent in {"anomaly_detection", "diagnosis"}:
         try:
-            if tool_name == "data_tool":
-                result = call_tool("data_tool", params=params)
-            elif tool_name == "alarm_tool":
-                device_id = params.get("device_id", "boiler_002")
-                hours = params.get("time_range_hours", 24)
-                result = call_tool("alarm_tool", device_id=device_id, hours=hours)
-            elif tool_name == "predict_tool":
-                device_id = params.get("device_id", "boiler_002")
-                parameter = params.get("parameter", "steam_temp")
-                hours = params.get("time_range_hours", 6)
-                result = call_tool("predict_tool", device_id=device_id,
-                                   parameter=parameter, hours=hours)
-            elif tool_name == "rag_tool":
-                query = f"{params.get('parameter', '')} 异常原因"
-                result = call_tool("rag_tool", query=query, top_k=3)
-            else:
-                logger.warning(f"未知 Tool: {tool_name}")
-                continue
-
-            tool_results[tool_name] = result
-            tool_calls.append({"tool": tool_name, "status": "success"})
-
-        except Exception as e:
-            logger.error(f"[tool_executor] {tool_name} 调用失败: {e}")
-            tool_results[tool_name] = {"error": str(e)}
-            tool_calls.append({"tool": tool_name, "status": "error", "error": str(e)})
+            report = call_tool(
+                "report_tool", diagnosis=build_diagnosis(tool_results, params)
+            )
+            if not isinstance(report, str):
+                raise TypeError("report_tool 必须返回 Markdown 字符串")
+            tool_results["report_tool"] = report
+            state["report"] = report
+        except Exception as exc:
+            logger.error(f"[tool_executor] report_tool 调用失败: {exc}")
+            tool_results["report_tool"] = {"error": str(exc)}
 
     state["tool_calls"] = tool_calls
     state["tool_results"] = tool_results
@@ -261,6 +305,7 @@ class SimpleAgent:
             "tool_calls": [],
             "tool_results": {},
             "final_response": "",
+            "report": "",
         }
 
         # 节点 1: 意图识别
