@@ -61,28 +61,36 @@ def fetch_history_data(device_id: str, parameter: str, hours: int = 168) -> pd.D
 
 def prepare_training_data(df: pd.DataFrame, resample_freq: str = '1min') -> pd.DataFrame:
     """
-    数据预处理：重采样、缺失值填充、去异常
+    数据预处理：清理无效值、重采样、缺失值填充。
 
-    参数:
-        df: pd.DataFrame - 原始数据，包含 ds 和 y 列
-        resample_freq: str - 重采样频率
-
-    返回:
-        pd.DataFrame - 处理后的数据
+    返回值始终包含 ``ds`` 和 ``y`` 两列，便于直接传给 Prophet 或
+    sklearn 降级模型；当没有任何有效观测时返回空 DataFrame。
     """
-    if df.empty:
-        return df
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError('Training data must be a pandas DataFrame')
+    if df.empty and not {'ds', 'y'}.issubset(df.columns):
+        return pd.DataFrame(columns=['ds', 'y'])
+    if not {'ds', 'y'}.issubset(df.columns):
+        raise ValueError("Training data must contain 'ds' and 'y' columns")
+    try:
+        pd.tseries.frequencies.to_offset(resample_freq)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Invalid resample frequency: {resample_freq!r}") from exc
 
-    df = df.copy()
-    df = df.drop_duplicates(subset='ds').sort_values('ds')
+    frame = df[['ds', 'y']].copy()
+    frame['ds'] = pd.to_datetime(frame['ds'], errors='coerce')
+    frame['y'] = pd.to_numeric(frame['y'], errors='coerce')
+    frame = (frame.replace([np.inf, -np.inf], np.nan)
+                  .dropna(subset=['ds', 'y'])
+                  .drop_duplicates(subset='ds', keep='last')
+                  .sort_values('ds'))
+    if frame.empty:
+        return pd.DataFrame(columns=['ds', 'y'])
 
-    df = df.set_index('ds').resample(resample_freq).mean()
-    df['y'] = df['y'].interpolate(method='linear')
-    df['y'] = df['y'].ffill().bfill()
-
-    df = df.reset_index()
-
-    return df
+    frame = frame.set_index('ds').resample(resample_freq).mean()
+    frame['y'] = frame['y'].interpolate(method='linear').ffill().bfill()
+    frame = frame.dropna(subset=['y']).reset_index()
+    return frame[['ds', 'y']]
 
 
 def split_train_test(df: pd.DataFrame, test_ratio: float = 0.2):

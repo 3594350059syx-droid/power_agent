@@ -205,7 +205,7 @@ check("has greeting response", bool(r.get("final_response")))
 # 诊断（含 RAG）
 r = agent.invoke({"messages": ["\u4e3a\u4ec0\u4e48\u0032\u53f7\u9505\u7089\u4e3b\u84b8\u6c7d\u6e29\u5ea6\u6301\u7eed\u5347\u9ad8\uff0c\u7ed9\u51fa\u5904\u7406\u5efa\u8bae"]})
 check("diagnosis intent", r["intent"] == "diagnosis", r.get("intent"))
-check("3 tools (data+alarm+rag)", len(r["tool_calls"]) == 3, str(len(r["tool_calls"])))
+check("4 tools (data+alarm+predict+rag)", len(r["tool_calls"]) == 4, str(len(r["tool_calls"])))
 
 # 数据查询
 r = agent.invoke({"messages": ["\u67e5\u8be2\u0034\u53f7\u53d1\u7535\u673a\u8fc7\u53bb\u0032\u0034\u5c0f\u65f6\u7684\u529f\u7387\u6570\u636e"]})

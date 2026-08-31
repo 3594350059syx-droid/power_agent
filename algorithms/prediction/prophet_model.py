@@ -16,6 +16,51 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import Pipeline
 
 
+_REQUIRED_COLUMNS = {'ds', 'y'}
+_VALID_MODEL_TYPES = {'auto', 'prophet', 'sklearn'}
+
+
+def _normalise_frame(df: pd.DataFrame, require_values: bool = True) -> pd.DataFrame:
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError('Prediction data must be a pandas DataFrame')
+    required = _REQUIRED_COLUMNS if require_values else {'ds'}
+    missing = required - set(df.columns)
+    if missing:
+        raise ValueError(f"Prediction data is missing columns: {sorted(missing)}")
+
+    columns = ['ds', 'y'] if require_values else ['ds']
+    frame = df[columns].copy()
+    frame['ds'] = pd.to_datetime(frame['ds'], errors='coerce')
+    if require_values:
+        frame['y'] = pd.to_numeric(frame['y'], errors='coerce')
+        frame = frame.replace([np.inf, -np.inf], np.nan).dropna(subset=['ds', 'y'])
+    else:
+        frame = frame.dropna(subset=['ds'])
+    frame = (frame.drop_duplicates(subset='ds', keep='last')
+                 .sort_values('ds')
+                 .reset_index(drop=True))
+    if frame.empty:
+        raise ValueError('Prediction data contains no valid observations')
+    return frame
+
+
+def _as_naive_timestamps(values: pd.Series) -> pd.Series:
+    timestamps = pd.to_datetime(values)
+    if getattr(timestamps.dt, 'tz', None) is not None:
+        return timestamps.dt.tz_localize(None)
+    return timestamps
+
+
+
+def _validate_periods(periods) -> int:
+    if isinstance(periods, bool) or not isinstance(periods, (int, np.integer)):
+        raise ValueError('periods must be a positive integer')
+    periods = int(periods)
+    if periods <= 0:
+        raise ValueError('periods must be a positive integer')
+    return periods
+
+
 class TimeSeriesPredictor:
     """
     时序预测模型封装
@@ -28,6 +73,10 @@ class TimeSeriesPredictor:
         参数:
             model_type: str - 模型类型 ('auto', 'prophet', 'sklearn')
         """
+        if model_type not in _VALID_MODEL_TYPES:
+            raise ValueError(
+                f"Unsupported model_type={model_type!r}; expected one of {sorted(_VALID_MODEL_TYPES)}"
+            )
         self.model_type = model_type
         self.model = None
         self._poly_features = None
@@ -46,13 +95,15 @@ class TimeSeriesPredictor:
         参数:
             df: pd.DataFrame - 训练数据，包含 ds 和 y 列
         """
-        if df.empty:
-            raise ValueError("Training data is empty")
+        frame = _normalise_frame(df)
+        if len(frame) < 2:
+            raise ValueError('At least two valid observations are required')
 
         if self.model_type == 'prophet':
-            self._fit_prophet(df)
+            self._fit_prophet(frame)
         else:
-            self._fit_sklearn(df)
+            self._fit_sklearn(frame)
+        return self
 
     def _fit_prophet(self, df: pd.DataFrame):
         self.model = Prophet(
@@ -63,7 +114,7 @@ class TimeSeriesPredictor:
             yearly_seasonality=False
         )
         train_df = df[['ds', 'y']].copy()
-        train_df['ds'] = train_df['ds'].dt.tz_localize(None) if train_df['ds'].dt.tz else train_df['ds']
+        train_df['ds'] = _as_naive_timestamps(train_df['ds'])
         self.model.fit(train_df)
 
     def _fit_sklearn(self, df: pd.DataFrame):
@@ -90,17 +141,24 @@ class TimeSeriesPredictor:
         返回:
             pd.DataFrame - 预测结果，包含 ds, yhat, yhat_lower, yhat_upper
         """
+        periods = _validate_periods(periods)
         if self.model is None:
             raise RuntimeError("Model not trained, call fit() first")
+        history = _normalise_frame(
+            df, require_values=self.model_type == 'sklearn'
+        )
 
         if self.model_type == 'prophet':
-            return self._predict_prophet(df, periods, freq)
-        else:
-            return self._predict_sklearn(df, periods, freq)
+            return self._predict_prophet(history, periods, freq)
+        return self._predict_sklearn(history, periods, freq)
 
     def _predict_prophet(self, df: pd.DataFrame, periods: int, freq: str):
-        future = self.model.make_future_dataframe(periods=periods, freq=freq, include_history=False)
-        forecast = self.model.predict(future)
+        self._freq_to_seconds(freq)
+        last_time = _as_naive_timestamps(df['ds']).iloc[-1]
+        future_times = pd.date_range(
+            start=last_time, periods=periods + 1, freq=freq
+        )[1:]
+        forecast = self.model.predict(pd.DataFrame({'ds': future_times}))
 
         result = pd.DataFrame({
             'ds': forecast['ds'],
@@ -136,20 +194,21 @@ class TimeSeriesPredictor:
         })
         return result
 
-    def _freq_to_seconds(self, freq: str) -> int:
-        freq_map = {
-            '1min': 60,
-            '5min': 300,
-            '15min': 900,
-            '1h': 3600,
-            'H': 3600,
-            'T': 60,
-        }
-        return freq_map.get(freq, 60)
+    def _freq_to_seconds(self, freq: str) -> float:
+        try:
+            offset = pd.tseries.frequencies.to_offset(freq)
+            seconds = float(offset.nanos) / 1_000_000_000
+        except (TypeError, ValueError, AttributeError, OverflowError):
+            raise ValueError(f"Unsupported fixed forecast frequency: {freq!r}") from None
+        if seconds <= 0:
+            raise ValueError(f"Forecast frequency must be positive: {freq!r}")
+        return seconds
 
     def save(self, filepath: str):
         """保存模型到文件"""
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        directory = os.path.dirname(filepath)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
         with open(filepath, 'wb') as f:
             pickle.dump({
                 'model': self.model,
@@ -207,16 +266,17 @@ class TimeSeriesPredictor:
         if self.model is None:
             raise RuntimeError("Model not trained")
 
+        frame = _normalise_frame(test_df)
         if self.model_type == 'prophet':
-            eval_df = test_df[['ds', 'y']].copy()
-            eval_df['ds'] = eval_df['ds'].dt.tz_localize(None) if eval_df['ds'].dt.tz else eval_df['ds']
+            eval_df = frame[['ds', 'y']].copy()
+            eval_df['ds'] = _as_naive_timestamps(eval_df['ds'])
             forecast = self.model.predict(eval_df[['ds']])
-            y_true = test_df['y'].values
-            y_pred = forecast['yhat'].values
+            y_true = frame['y'].to_numpy(dtype=float)
+            y_pred = forecast['yhat'].to_numpy(dtype=float)
         else:
-            features = extract_features(test_df, time_origin=self._feature_time_origin)
+            features = extract_features(frame, time_origin=self._feature_time_origin)
             X = self._poly_features.transform(features.values)
-            y_true = test_df['y'].values
+            y_true = frame['y'].to_numpy(dtype=float)
             y_pred = self.model.predict(X)
 
         rmse = float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
