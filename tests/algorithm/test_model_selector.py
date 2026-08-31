@@ -11,6 +11,8 @@ P1-2 模型自适应选择测试
 import os
 import sys
 import unittest
+import tempfile
+from types import SimpleNamespace
 from unittest.mock import patch, MagicMock
 
 # 确保项目根目录在 sys.path 中
@@ -117,6 +119,54 @@ class TestConditionDetection(unittest.TestCase):
 
         selector = ModelSelector()
         self.assertEqual(selector.detect_condition('unknown_device'), 'low')
+
+
+class TestModelCacheContract(unittest.TestCase):
+    def test_stale_or_corrupt_cache_is_a_cache_miss(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, 'model.pkl')
+            with open(path, 'wb') as cache_file:
+                cache_file.write(b'not-a-pickle')
+
+            selector = ModelSelector(model_dir=directory)
+            with patch('algorithms.evaluation.model_selector.TimeSeriesPredictor.load', side_effect=ValueError('bad cache')):
+                self.assertIsNone(selector._load_cached_model(path))
+
+            with patch('algorithms.evaluation.model_selector.datetime') as mock_datetime:
+                mock_datetime.now.return_value.timestamp.return_value = os.path.getmtime(path) + 7 * 3600
+                self.assertIsNone(selector._load_cached_model(path))
+
+    @patch('algorithms.evaluation.model_selector.get_device_by_code_or_name')
+    @patch('algorithms.evaluation.model_selector.get_db')
+    def test_cache_miss_retrains_and_returns_stable_selection(self, mock_get_db, mock_get_device):
+        with tempfile.TemporaryDirectory() as directory:
+            db = MagicMock()
+            mock_get_db.return_value = iter([db])
+            mock_get_device.return_value = SimpleNamespace(id=1, device_code='generator_004')
+            predictor = MagicMock(model_type='sklearn')
+            selector = ModelSelector(model_dir=directory)
+            trained_path = os.path.join(directory, 'generator_004_stator_temp_high.pkl')
+            train_result = {
+                'high': {
+                    'model_name': 'generator_004_stator_temp_high',
+                    'model_path': trained_path,
+                    'model_source': 'newly_trained',
+                    'metrics': {'rmse': 1.2, 'mae': 0.8},
+                    'sample_count': 100,
+                },
+                'low': {'sample_count': 0, 'metrics': {}, 'model_path': None},
+            }
+
+            with patch.object(selector, 'detect_condition', return_value='high'), \
+                    patch.object(selector, '_load_cached_model', side_effect=[None, predictor]), \
+                    patch.object(selector, 'train_condition_models', return_value=train_result) as train:
+                result = selector.select_model_by_condition('generator_004', 'stator_temp')
+
+            train.assert_called_once_with('generator_004', 'stator_temp')
+            self.assertEqual(result['model_source'], 'newly_trained')
+            self.assertEqual(result['model_name'], 'generator_004_stator_temp_high')
+            self.assertEqual(result['metrics'], {'rmse': 1.2, 'mae': 0.8})
+            self.assertEqual(result['sample_counts'], {'high': 100, 'low': 0})
 
 
 if __name__ == '__main__':

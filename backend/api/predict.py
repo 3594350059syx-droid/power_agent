@@ -34,3 +34,17 @@ def select_model(
     if "error" in result:
         return http_error(message=result["error"], status_code=400)
     return success_response(data=result, message="模型选择完成")
+
+
+@router.get("/predict/model/compare")
+def compare_models(
+    device_id: str = Query(..., description="设备编码（英文ID或中文名）"),
+    parameter: str = Query("stator_temp", description="测点参数名"),
+):
+    """返回高/低负荷模型的 RMSE、MAE 及当前推荐模型。"""
+    from algorithms.evaluation.model_selector import ModelSelector
+
+    result = ModelSelector().compare_condition_models(device_id, parameter)
+    if "error" in result:
+        return http_error(message=result["error"], status_code=400)
+    return success_response(data=result, message="模型对比完成")

@@ -171,6 +171,31 @@ class TestDataPreprocessing(unittest.TestCase):
         self.assertEqual(len(test), 20)
 
 
+class TestPredictionValidation(unittest.TestCase):
+    """P1-1 输入和输出契约测试。"""
+
+    def test_invalid_model_type_is_rejected(self):
+        with self.assertRaises(ValueError):
+            TimeSeriesPredictor(model_type='unknown')
+
+    def test_invalid_periods_are_rejected(self):
+        predictor = TimeSeriesPredictor(model_type='sklearn')
+        with self.assertRaises(ValueError):
+            predictor.predict(pd.DataFrame({'ds': [datetime(2026, 1, 1)]}), 0)
+
+    def test_dirty_history_is_cleaned_before_fit(self):
+        df = pd.DataFrame({
+            'ds': [datetime(2026, 1, 1, 0, 2), None,
+                   datetime(2026, 1, 1, 0, 1), datetime(2026, 1, 1, 0, 1)],
+            'y': [2.0, 99.0, 1.0, float('nan')],
+        })
+        predictor = TimeSeriesPredictor(model_type='sklearn')
+        predictor.fit(df)
+        forecast = predictor.predict(df, periods=2, freq='1h')
+        self.assertEqual(len(forecast), 2)
+        self.assertTrue(forecast['ds'].is_monotonic_increasing)
+
+
 class TestTrendDetection(unittest.TestCase):
     """趋势判定测试（predict_service._calculate_trend）"""
 

@@ -8,7 +8,7 @@
         </el-tag>
       </div>
       <div class="header-right">
-        <span>⏱ 上次刷新：{{ lastUpdateTime || '--' }} <span class="refresh-interval">｜每 3 秒自动刷新</span></span>
+        <span>⏱ 上次刷新：{{ lastUpdateTime || '--' }} <span class="refresh-interval">｜WebSocket 实时推送，断线自动轮询</span></span>
         <el-button size="small" :loading="isLoading" @click="refreshData">
           <el-icon><Refresh /></el-icon> 刷新
         </el-button>
@@ -61,6 +61,24 @@ const isLoading = ref(false)
 const isConnected = ref(false)
 const lastUpdateTime = ref('')
 let refreshTimer = null
+let heartbeatTimer = null
+const reconnectTimers = new Map()
+const sockets = new Map()
+const activeSocketCount = ref(0)
+const isUnmounted = ref(false)
+const useMock = import.meta.env.VITE_USE_MOCK === 'true'
+
+const websocketBaseUrl = () => {
+  const configured = import.meta.env.VITE_API_BASE_URL || '/api/v1'
+  if (/^https?:\/\//i.test(configured)) {
+    const url = new URL(configured)
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+    return url.toString().replace(/\/$/, '')
+  }
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${protocol}//${window.location.host}${configured.replace(/\/$/, '')}`
+}
 
 const processDeviceData = (config, response) => {
   const data = response?.data || {}
@@ -75,6 +93,19 @@ const processDeviceData = (config, response) => {
 const isValidDeviceResponse = response => {
   const status = response?.data?.device_status?.status
   return response?.success === true && !['error', 'unknown'].includes(status)
+}
+
+const processSnapshot = (event, config) => {
+  const response = { success: true, data: event?.data || {} }
+  const nextDevice = processDeviceData(config, response)
+  const index = devices.value.findIndex(device => device.deviceId === config.id)
+  if (index === -1) {
+    devices.value = [...devices.value, nextDevice]
+  } else {
+    devices.value[index] = nextDevice
+  }
+  isConnected.value = devices.value.some(device => !['error', 'unknown'].includes(device.deviceStatus))
+  lastUpdateTime.value = new Date().toLocaleTimeString()
 }
 
 const fetchAllDevices = async () => {
@@ -101,19 +132,107 @@ const fetchAllDevices = async () => {
 const refreshData = () => fetchAllDevices()
 
 const startPolling = () => {
+  if (refreshTimer || isUnmounted.value) return
   refreshTimer = window.setInterval(fetchAllDevices, 3000)
 }
 
-onMounted(async () => {
-  await fetchAllDevices()
-  startPolling()
-})
-
-onBeforeUnmount(() => {
+const stopPolling = () => {
   if (refreshTimer) {
     window.clearInterval(refreshTimer)
     refreshTimer = null
   }
+}
+
+const scheduleReconnect = config => {
+  if (isUnmounted.value || reconnectTimers.has(config.id)) return
+  reconnectTimers.set(config.id, window.setTimeout(() => {
+    reconnectTimers.delete(config.id)
+    connectDevice(config)
+  }, 5000))
+}
+
+const connectDevice = config => {
+  if (isUnmounted.value || useMock || sockets.has(config.id)) return
+
+  let socket
+  try {
+    const url = `${websocketBaseUrl()}/ws/telemetry/${encodeURIComponent(config.id)}`
+    socket = new WebSocket(url)
+  } catch (error) {
+    console.warn('创建遥测 WebSocket 失败，降级为轮询:', error)
+    startPolling()
+    scheduleReconnect(config)
+    return
+  }
+  let countedAsOpen = false
+  sockets.set(config.id, socket)
+
+  socket.onopen = () => {
+    countedAsOpen = true
+    activeSocketCount.value += 1
+    if (activeSocketCount.value === DEVICE_CONFIG.length) stopPolling()
+  }
+
+  socket.onmessage = message => {
+    try {
+      const event = JSON.parse(message.data)
+      if (event.type === 'pong' || event.event === 'heartbeat') return
+      if (event.type === 'telemetry' && event.event === 'telemetry_snapshot') {
+        processSnapshot(event, config)
+      }
+    } catch (error) {
+      console.warn('解析遥测 WebSocket 消息失败:', error)
+    }
+  }
+
+  socket.onerror = () => {
+    // onclose 负责清理和进入轮询降级，避免同一断线重复处理。
+    socket.close()
+  }
+
+  socket.onclose = () => {
+    if (sockets.get(config.id) === socket) sockets.delete(config.id)
+    if (countedAsOpen && activeSocketCount.value > 0) {
+      activeSocketCount.value -= 1
+    }
+    startPolling()
+    scheduleReconnect(config)
+  }
+}
+
+const startRealtime = () => {
+  if (useMock) {
+    startPolling()
+    return
+  }
+
+  DEVICE_CONFIG.forEach(connectDevice)
+  heartbeatTimer = window.setInterval(() => {
+    sockets.forEach(socket => {
+      if (socket.readyState === WebSocket.OPEN) socket.send('ping')
+    })
+  }, 10000)
+}
+
+onMounted(async () => {
+  await fetchAllDevices()
+  startRealtime()
+})
+
+onBeforeUnmount(() => {
+  isUnmounted.value = true
+  if (heartbeatTimer) {
+    window.clearInterval(heartbeatTimer)
+    heartbeatTimer = null
+  }
+  if (refreshTimer) {
+    window.clearInterval(refreshTimer)
+    refreshTimer = null
+  }
+  reconnectTimers.forEach(timer => window.clearTimeout(timer))
+  reconnectTimers.clear()
+  sockets.forEach(socket => socket.close())
+  sockets.clear()
 })
 </script>
 
