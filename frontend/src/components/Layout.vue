@@ -11,6 +11,14 @@
           <el-icon><DataBoard /></el-icon>
           <span>监控面板</span>
         </el-menu-item>
+        <el-menu-item index="/trend">
+          <el-icon><TrendCharts /></el-icon>
+          <span>趋势分析</span>
+        </el-menu-item>
+        <el-menu-item index="/alarm">
+          <el-icon><Bell /></el-icon>
+          <span>告警中心</span>
+        </el-menu-item>
         <el-menu-item index="/chat">
           <el-icon><ChatDotRound /></el-icon>
           <span>AI智能对话</span>
@@ -35,13 +43,12 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { DataBoard, ChatDotRound } from '@element-plus/icons-vue'
+import { DataBoard, ChatDotRound, TrendCharts, Bell } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
 const handleLogout = () => {
   localStorage.removeItem('token')
-  // 当前项目未提供登录页，退出后返回可访问的监控首页。
   router.replace('/dashboard')
 }
 </script>
