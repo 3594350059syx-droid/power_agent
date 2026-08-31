@@ -9,6 +9,8 @@ import * as echarts from 'echarts'
 const chartRef = ref(null)
 let chart = null
 
+const handleResize = () => chart?.resize()
+
 const props = defineProps({
   data: { type: Array, default: () => [] },
   xData: { type: Array, default: () => [] },
@@ -21,7 +23,7 @@ const initChart = () => {
   if (!chartRef.value) return
   chart = echarts.init(chartRef.value)
   updateChart()
-  window.addEventListener('resize', () => chart?.resize())
+  window.addEventListener('resize', handleResize)
 }
 
 const updateChart = () => {
@@ -85,7 +87,7 @@ const updateChart = () => {
   chart.setOption(option)
 }
 
-watch(() => [props.data, props.xData, props.anomalyRanges], () => {
+watch(() => [props.data, props.xData, props.parameter, props.unit, props.anomalyRanges], () => {
   nextTick(() => updateChart())
 }, { deep: true })
 
@@ -94,7 +96,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', () => chart?.resize())
+  window.removeEventListener('resize', handleResize)
   chart?.dispose()
 })
 </script>

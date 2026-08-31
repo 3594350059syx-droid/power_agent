@@ -4,8 +4,8 @@
       <el-row :gutter="20" align="middle">
         <el-col :span="6">
           <el-form-item label="设备">
-            <el-select v-model="deviceId" placeholder="选择设备" @change="handleSearch">
-              <el-option label="2号机组" value="boiler_002" />
+            <el-select v-model="deviceId" placeholder="选择设备" @change="handleDeviceChange">
+              <el-option label="2号锅炉" value="boiler_002" />
               <el-option label="3号汽轮机" value="turbine_003" />
               <el-option label="4号发电机" value="generator_004" />
             </el-select>
@@ -13,7 +13,7 @@
         </el-col>
         <el-col :span="6">
           <el-form-item label="参数">
-            <ParamSelector v-model="parameter" @update:model-value="handleSearch" />
+            <ParamSelector :model-value="parameter" :options="parameterOptions" @update:model-value="handleParameterChange" />
           </el-form-item>
         </el-col>
         <el-col :span="6">
@@ -57,35 +57,40 @@ const chartData = ref([])
 const chartXData = ref([])
 const anomalyRanges = ref([])
 
-const parameterLabel = computed(() => {
-  const map = {
-    steam_temp: '主蒸汽温度',
-    steam_pressure: '主蒸汽压力',
-    furnace_temp: '炉膛温度',
-    rpm: '转速',
-    bearing_temp: '轴承温度',
-    vibration: '振动',
-    power: '有功功率',
-    stator_temp: '定子温度',
-    reactive_power: '无功功率'
-  }
-  return map[parameter.value] || parameter.value
-})
+const metricOptionsByDevice = {
+  boiler_002: [
+    { label: '主蒸汽温度', value: 'steam_temp', unit: '℃' },
+    { label: '主蒸汽压力', value: 'steam_pressure', unit: 'MPa' },
+    { label: '炉膛温度', value: 'furnace_temp', unit: '℃' }
+  ],
+  turbine_003: [
+    { label: '转速', value: 'rpm', unit: 'rpm' },
+    { label: '轴承温度', value: 'bearing_temp', unit: '℃' },
+    { label: '振动', value: 'vibration', unit: 'mm' }
+  ],
+  generator_004: [
+    { label: '有功功率', value: 'power', unit: 'MW' },
+    { label: '定子温度', value: 'stator_temp', unit: '℃' },
+    { label: '无功功率', value: 'reactive_power', unit: 'Mvar' }
+  ]
+}
 
-const unit = computed(() => {
-  const map = {
-    steam_temp: '℃',
-    steam_pressure: 'MPa',
-    furnace_temp: '℃',
-    rpm: 'rpm',
-    bearing_temp: '℃',
-    vibration: 'mm',
-    power: 'MW',
-    stator_temp: '℃',
-    reactive_power: 'Mvar'
+const parameterOptions = computed(() => metricOptionsByDevice[deviceId.value] || [])
+const selectedMetric = computed(() => parameterOptions.value.find(item => item.value === parameter.value))
+const parameterLabel = computed(() => selectedMetric.value?.label || parameter.value)
+const unit = computed(() => selectedMetric.value?.unit || '')
+
+const handleDeviceChange = () => {
+  if (!parameterOptions.value.some(item => item.value === parameter.value)) {
+    parameter.value = parameterOptions.value[0]?.value || ''
   }
-  return map[parameter.value] || ''
-})
+  handleSearch()
+}
+
+const handleParameterChange = (value) => {
+  parameter.value = value
+  handleSearch()
+}
 
 const handleSearch = async () => {
   if (!deviceId.value || !parameter.value) {

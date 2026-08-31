@@ -6,6 +6,7 @@ Dashboard 使用的设备和测点契约在此集中定义。数据库中 3 个�
 """
 
 import logging
+from datetime import datetime, timedelta
 
 from sqlalchemy import and_, func
 from sqlalchemy.exc import SQLAlchemyError
@@ -33,6 +34,12 @@ DEVICE_METRICS = {
         {"key": "stator_temp", "name": "定子温度", "unit": "℃", "normal_range": [90, 120], "digits": 1},
         {"key": "reactive_power", "name": "无功功率", "unit": "Mvar", "normal_range": [30, 70], "digits": 1},
     ],
+}
+
+METRIC_LABELS = {
+    metric["key"]: metric["name"]
+    for metrics in DEVICE_METRICS.values()
+    for metric in metrics
 }
 
 _SUPPORTED_DEVICE_STATUSES = {
@@ -138,6 +145,83 @@ def get_database_live_telemetry(device_id: str, db: Session | None = None) -> di
         }
     except SQLAlchemyError as exc:
         logger.warning("读取设备 %s 的实时数据库遥测失败，降级为 Mock: %s", device_id, exc)
+        return None
+    finally:
+        if owns_session:
+            db.close()
+
+
+def get_database_history_trend(
+    device_id: str,
+    parameter: str,
+    hours: int,
+    db: Session | None = None,
+) -> dict | None:
+    """读取一个测点的历史趋势，并基于告警阈值标注连续异常区间。
+
+    返回 ``None`` 代表设备、测点或历史记录未初始化，或数据库暂不可用。API 层
+    会在这种场景返回同一数据契约的 Mock，以保证本地演示环境可用。
+    """
+    metric_definitions = DEVICE_METRICS.get(device_id, [])
+    metric = next((item for item in metric_definitions if item["key"] == parameter), None)
+    if metric is None:
+        return None
+
+    owns_session = db is None
+    db = db or SessionLocal()
+    try:
+        device = db.query(Device).filter(Device.device_code == device_id).first()
+        if not device:
+            return None
+
+        sensor = db.query(SensorPoint).filter(
+            SensorPoint.device_id == device.id,
+            SensorPoint.point_name == parameter,
+        ).first()
+        if not sensor:
+            return None
+
+        start_time = datetime.now() - timedelta(hours=hours)
+        rows = db.query(TimeseriesData).filter(
+            TimeseriesData.device_id == device.id,
+            TimeseriesData.sensor_id == sensor.id,
+            TimeseriesData.recorded_at >= start_time,
+        ).order_by(TimeseriesData.recorded_at).all()
+        if not rows:
+            return None
+
+        timestamps = [row.recorded_at.isoformat() for row in rows]
+        values = [round(row.value, metric["digits"]) for row in rows]
+        anomaly_ranges = []
+        range_start = None
+        range_end = None
+
+        for row, timestamp in zip(rows, timestamps):
+            is_anomaly = (
+                (sensor.threshold_high is not None and row.value > sensor.threshold_high)
+                or (sensor.threshold_low is not None and row.value < sensor.threshold_low)
+            )
+            if is_anomaly:
+                range_start = range_start or timestamp
+                range_end = timestamp
+            elif range_start is not None:
+                anomaly_ranges.append({"start": range_start, "end": range_end})
+                range_start = None
+                range_end = None
+
+        if range_start is not None:
+            anomaly_ranges.append({"start": range_start, "end": range_end})
+
+        return {
+            "device_id": device_id,
+            "parameter": parameter,
+            "unit": sensor.unit or metric["unit"],
+            "timestamps": timestamps,
+            "values": values,
+            "anomaly_ranges": anomaly_ranges,
+        }
+    except SQLAlchemyError as exc:
+        logger.warning("读取设备 %s 的历史遥测失败，降级为 Mock: %s", device_id, exc)
         return None
     finally:
         if owns_session:

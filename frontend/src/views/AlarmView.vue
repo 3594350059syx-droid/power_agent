@@ -32,7 +32,7 @@ const handleSearch = async () => {
   try {
     const res = await getAlarmList(severity.value, sort.value)
     if (res.success) {
-      alarmList.value = res.data || []
+      alarmList.value = res.data?.alarms || []
     } else {
       ElMessage.error(res.message || '获取告警列表失败')
     }

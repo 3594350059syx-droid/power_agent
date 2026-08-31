@@ -111,16 +111,21 @@ export function getHistoryTrend(deviceId = 'boiler_002', parameter = 'steam_temp
 
     for (let i = hours - 1; i >= 0; i--) {
       const t = new Date(now.getTime() - i * 3600000)
-      timestamps.push(t.toLocaleString())
+      const timestamp = t.toISOString()
+      timestamps.push(timestamp)
 
       let value = mid + (Math.random() - 0.5) * range * 0.8
 
-      if (Math.random() < 0.1 && values.length > 5) {
+      const isAnomaly = Math.random() < 0.1 && values.length > 5
+      if (isAnomaly) {
         value = normalRange[1] + Math.random() * (normalRange[1] - normalRange[0]) * 0.3
-        if (anomalyRanges.length === 0 || anomalyRanges[anomalyRanges.length - 1].end !== timestamps[timestamps.length - 2]) {
+        const currentRange = anomalyRanges[anomalyRanges.length - 1]
+        if (currentRange && currentRange.end === timestamps[timestamps.length - 2]) {
+          currentRange.end = timestamp
+        } else {
           anomalyRanges.push({
-            start: timestamps[timestamps.length - 2] || timestamps[0],
-            end: timestamps[timestamps.length - 1] || timestamps[0]
+            start: timestamp,
+            end: timestamp
           })
         }
       }

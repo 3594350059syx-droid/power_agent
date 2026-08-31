@@ -1,10 +1,16 @@
+import logging
 from datetime import datetime, timedelta
-from backend.database.connection import get_db
+from sqlalchemy.exc import SQLAlchemyError
+
+from backend.database.connection import SessionLocal, get_db
 from backend.database.models import Device, SensorPoint, AlarmRecord, TimeseriesData
 from backend.services.data_service import get_device_by_code_or_name, resolve_param_name, get_sensor_info
+from backend.services.telemetry_service import METRIC_LABELS
 from algorithms.anomaly_detection.threshold_detector import ThresholdDetector
 from algorithms.anomaly_detection.trend_detector import TrendDetector
 from algorithms.anomaly_detection.risk_scorer import RiskScorer
+
+logger = logging.getLogger(__name__)
 
 
 def analyze_device_anomalies(device_id: str, hours: int = 24) -> dict:
@@ -166,20 +172,92 @@ def get_alarm_history(device_id: str, hours: int = 24, status: str = None) -> li
         db.close()
 
 
-def acknowledge_alarm(alarm_id: int) -> bool:
+def _serialize_alarm(row: AlarmRecord, device: Device | None, sensor: SensorPoint | None) -> dict:
+    """将 ORM 告警记录转换为告警中心使用的稳定响应契约。"""
+    parameter = sensor.point_name if sensor else ""
+    return {
+        "id": row.id,
+        "device_id": device.device_code if device else "",
+        "device_name": device.device_name if device else "",
+        "parameter": parameter,
+        "parameter_name": METRIC_LABELS.get(parameter, parameter),
+        "alarm_type": row.alarm_type or "threshold",
+        "severity": (row.severity or "low").lower(),
+        "current_value": row.current_value,
+        "threshold_value": row.threshold_value,
+        "message": row.message or "",
+        "status": (row.status or "pending").lower(),
+        "triggered_at": row.triggered_at.isoformat() if row.triggered_at else None,
+    }
+
+
+def list_alarm_records(
+    severity: str | None = None,
+    sort: str = "time_desc",
+    device_id: str | None = None,
+    hours: int | None = None,
+    db=None,
+) -> list[dict] | None:
+    """查询告警中心列表；数据库不可用时返回 ``None`` 交由 API 层降级。"""
+    owns_session = db is None
+    db = db or SessionLocal()
+    try:
+        query = db.query(AlarmRecord, Device, SensorPoint).outerjoin(
+            Device, AlarmRecord.device_id == Device.id,
+        ).outerjoin(
+            SensorPoint, AlarmRecord.sensor_id == SensorPoint.id,
+        )
+
+        if severity and severity != "all":
+            query = query.filter(AlarmRecord.severity == severity)
+        if device_id:
+            query = query.filter(Device.device_code == device_id)
+        if hours is not None:
+            query = query.filter(AlarmRecord.triggered_at >= datetime.now() - timedelta(hours=hours))
+
+        order_by = (
+            AlarmRecord.triggered_at.asc()
+            if sort == "time_asc"
+            else AlarmRecord.triggered_at.desc()
+        )
+        rows = query.order_by(order_by).all()
+        if not rows:
+            return None
+        return [_serialize_alarm(row, device, sensor) for row, device, sensor in rows]
+    except SQLAlchemyError:
+        logger.warning("查询告警列表失败", exc_info=True)
+        return None
+    finally:
+        if owns_session:
+            db.close()
+
+
+def acknowledge_alarm(alarm_id: int, db=None) -> bool | None:
     """
-    确认告警
+    确认告警。
+
+    返回 ``True`` 表示已确认，``False`` 表示记录不存在，``None`` 表示数据库不可用。
     """
-    db = next(get_db())
+    owns_session = db is None
+    db = db or SessionLocal()
     try:
         alarm = db.query(AlarmRecord).filter_by(id=alarm_id).first()
         if alarm:
             alarm.status = 'acknowledged'
             db.commit()
             return True
+
+        # 空库代表 API 层应使用契约 Mock；存在其他真实告警时则严格返回
+        # “该 ID 不存在”，不能错误确认同 ID 的降级 Mock 记录。
+        if db.query(AlarmRecord.id).first() is None:
+            return None
         return False
+    except SQLAlchemyError:
+        db.rollback()
+        return None
     finally:
-        db.close()
+        if owns_session:
+            db.close()
 
 
 def get_all_pending_alarms() -> list:
