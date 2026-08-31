@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import os
+from pathlib import Path
 import numpy as np
 from backend.database.connection import get_db
 from backend.database.models import Device, SensorPoint, TimeseriesData
@@ -7,9 +8,16 @@ from backend.services.data_service import get_device_by_code_or_name, resolve_pa
 from algorithms.prediction import TimeSeriesPredictor, fetch_history_data, prepare_training_data
 
 
-MODEL_CACHE_DIR = 'models/prediction'
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+MODEL_CACHE_DIR = str(PROJECT_ROOT / 'models' / 'prediction')
 # 缓存 TTL（秒）：超过此时长认为模型过期，强制重训
 MODEL_CACHE_TTL_SECONDS = 6 * 3600
+
+
+def _validate_positive_int(value, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, (int, np.integer)) or value <= 0:
+        raise ValueError(f"{name} must be a positive integer")
+    return int(value)
 
 
 def _model_cache_path(device_code: str, resolved_param: str) -> str:
@@ -32,6 +40,9 @@ def predict_parameter(device_id: str, parameter: str, hours: int = 6,
     缓存不存在或超过 TTL（默认 6h）时，拉取历史数据重训并保存。
     与 P1-2 ModelSelector 的 train_and_save_model 产出的缓存共享同一目录。
     """
+    hours = _validate_positive_int(hours, 'hours')
+    history_hours = _validate_positive_int(history_hours, 'history_hours')
+
     db = next(get_db())
     try:
         device = get_device_by_code_or_name(db, device_id)
@@ -54,8 +65,8 @@ def predict_parameter(device_id: str, parameter: str, hours: int = 6,
         if use_cache and _model_fresh(cache_path):
             try:
                 predictor = TimeSeriesPredictor.load(cache_path)
-            except Exception as e:
-                # 跨环境 prophet 未安装 / pickle 损坏等，降级为重训
+            except Exception:
+                # 跨环境 Prophet 未安装 / pickle 损坏等，降级为重训
                 predictor = None
 
         # 2) 缓存未命中 → 拉取数据 + fit + 保存
@@ -83,12 +94,15 @@ def predict_parameter(device_id: str, parameter: str, hours: int = 6,
                 return {'error': 'No historical data available for prediction anchor'}
             df = prepare_training_data(raw_df, resample_freq='1min')
 
-        periods = hours * 60
-        forecast = predictor.predict(df, periods=periods, freq='1min')
+        # P1-1 契约：每个输出点代表未来一个小时，且数量严格等于 hours。
+        forecast = predictor.predict(df, periods=hours, freq='1h')
+        if len(forecast) != hours:
+            return {
+                'error': f'Prediction model returned {len(forecast)} points; expected {hours}'
+            }
 
         predictions = []
-        for i in range(0, len(forecast), 60):
-            row = forecast.iloc[i]
+        for _, row in forecast.iterrows():
             predictions.append({
                 'time': row['ds'].isoformat() if hasattr(row['ds'], 'isoformat') else str(row['ds']),
                 'value': round(float(row['yhat']), 2),

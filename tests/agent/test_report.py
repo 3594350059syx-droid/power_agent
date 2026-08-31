@@ -87,6 +87,34 @@ class TestReportTool(unittest.TestCase):
 
 
 class TestReportWorkflowIntegration(unittest.TestCase):
+    def test_diagnosis_executes_prediction_tool(self):
+        tool_results = {
+            "data_tool": {"device_id": "boiler_002", "data": [], "stats": {}},
+            "alarm_tool": {"device_id": "boiler_002", "risk_score": 0.72, "alarms": []},
+            "predict_tool": {"trend": "rising", "confidence": 0.9, "predictions": []},
+            "rag_tool": [],
+        }
+        statuses = {
+            name: {"tool": name, "status": "success"}
+            for name in ("data_tool", "alarm_tool", "predict_tool", "rag_tool")
+        }
+        state = {
+            "intent": "diagnosis",
+            "params": {"device_id": "boiler_002", "time_range_hours": 24},
+            "tool_calls": [],
+            "tool_results": {},
+            "report": "",
+        }
+
+        with patch("agent.graph.workflow._execute_independent_tools", return_value=(tool_results, statuses)), \
+                patch("agent.graph.workflow.call_tool", return_value="# 设备诊断报告\n"):
+            result = tool_executor(state)
+
+        self.assertEqual(
+            [call["tool"] for call in result["tool_calls"]],
+            ["data_tool", "alarm_tool", "predict_tool", "rag_tool"],
+        )
+
     def test_report_is_generated_without_changing_legacy_tool_call_count(self):
         tool_results = {
             "data_tool": {"device_id": "boiler_002", "data": [], "stats": {}},

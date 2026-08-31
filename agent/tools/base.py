@@ -135,6 +135,6 @@ INTENT_TOOL_MAP: dict[str, list[str]] = {
     "data_query":         ["data_tool"],
     "anomaly_detection":  ["data_tool", "alarm_tool"],
     "prediction":         ["data_tool", "predict_tool"],
-    "diagnosis":          ["data_tool", "alarm_tool", "rag_tool"],
+    "diagnosis":          ["data_tool", "alarm_tool", "predict_tool", "rag_tool"],
     "chat":               [],
 }

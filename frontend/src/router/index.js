@@ -4,24 +4,26 @@ import Layout from '@/components/Layout.vue'
 const routes = [
   {
     path: '/',
+    name: 'Landing',
+    component: () => import('@/views/Landing.vue'),
+    meta: { title: 'Nexus Industrial Intelligence' }
+  },
+  {
+    path: '/',
     component: Layout,
     children: [
       {
-        path: '',
-        redirect: '/dashboard'
-      },
-      {
-        path: '/dashboard',
+        path: 'dashboard',
         name: 'Dashboard',
         component: () => import('@/views/Dashboard.vue'),
         meta: { title: '监控面板' }
       },
       {
-        path: '/monitor',
+        path: 'monitor',
         redirect: '/dashboard'
       },
       {
-        path: '/chat',
+        path: 'chat',
         name: 'Chat',
         component: () => import('@/views/Chat.vue'),
         meta: { title: 'AI智能对话' }

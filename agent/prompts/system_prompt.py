@@ -38,7 +38,7 @@ INTENT_DESCRIPTIONS = """\
 | data_query           | 查询设备历史数据    | data_tool                     |
 | anomaly_detection    | 异常检测分析        | data_tool + alarm_tool        |
 | prediction           | 趋势预测           | data_tool + predict_tool      |
-| diagnosis            | 故障诊断           | data_tool + alarm_tool + rag_tool |
+| diagnosis            | 故障诊断           | data_tool + alarm_tool + predict_tool + rag_tool |
 | chat                 | 闲聊/通用问答      | 无（直接回复）                  |
 """
 
