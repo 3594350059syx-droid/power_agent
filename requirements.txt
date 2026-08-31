@@ -25,3 +25,7 @@ langchain-text-splitters>=0.3.0
 numpy>=1.24.0
 pandas>=2.0.0
 scikit-learn>=1.2.0
+
+# Prediction (可选装)
+# prophet>=1.1.0  # Prophet 时序预测：Windows 上 pip 安装需编译工具，极易失败；
+                  # 代码已实现 PROPHET_AVAILABLE 检测 + scikit-learn 降级方案，保持可选。

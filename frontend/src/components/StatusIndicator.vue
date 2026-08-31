@@ -1,5 +1,5 @@
 <template>
-  <span class="status-indicator" :class="level">
+  <span class="status-indicator" :class="normalizedLevel">
     <span class="dot"></span>
     {{ label }}
   </span>
@@ -11,19 +11,26 @@ import { computed } from 'vue'
 const props = defineProps({
   level: {
     type: String,
-    default: 'normal',
-    validator: (val) => ['normal', 'warn', 'danger'].includes(val)
+    default: 'unknown'
   }
 })
 
-const label = computed(() => {
-  const map = {
-    normal: '正常',
-    warn: '预警',
-    danger: '异常'
+const normalizedLevel = computed(() => {
+  const aliases = {
+    warning: 'warn',
+    error: 'danger',
+    stopped: 'danger'
   }
-  return map[props.level] || '正常'
+  const level = props.level?.toLowerCase()
+  return aliases[level] || (['normal', 'warn', 'danger', 'unknown'].includes(level) ? level : 'unknown')
 })
+
+const label = computed(() => ({
+  normal: '正常',
+  warn: '预警',
+  danger: '异常',
+  unknown: '未知'
+}[normalizedLevel.value]))
 </script>
 
 <style scoped>
@@ -31,37 +38,24 @@ const label = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
-  font-weight: 500;
   padding: 2px 8px;
   border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
 }
 
-.status-indicator .dot {
+.dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  display: inline-block;
 }
 
-.status-indicator.normal {
-  color: #52c41a;
-}
-.status-indicator.normal .dot {
-  background: #52c41a;
-}
-
-.status-indicator.warn {
-  color: #faad14;
-}
-.status-indicator.warn .dot {
-  background: #faad14;
-}
-
-.status-indicator.danger {
-  color: #f5222d;
-}
-.status-indicator.danger .dot {
-  background: #f5222d;
-}
+.normal { color: #52c41a; }
+.normal .dot { background: #52c41a; }
+.warn { color: #faad14; }
+.warn .dot { background: #faad14; }
+.danger { color: #f5222d; }
+.danger .dot { background: #f5222d; }
+.unknown { color: #909399; }
+.unknown .dot { background: #909399; }
 </style>

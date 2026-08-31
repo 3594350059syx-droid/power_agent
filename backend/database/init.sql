@@ -1,3 +1,7 @@
+-- 启用 TimescaleDB 扩展（docker-entrypoint-initdb.d/ 执行的首个脚本必须先加载扩展，
+-- 否则 SELECT create_hypertable(...) 会报 "function does not exist"，导致一键部署失败）
+CREATE EXTENSION IF NOT EXISTS timescaledb;
+
 CREATE TABLE device (
     id SERIAL PRIMARY KEY,
     device_code VARCHAR(50) UNIQUE NOT NULL,
@@ -44,7 +48,9 @@ CREATE TABLE timeseries_data (
     sensor_id INTEGER REFERENCES sensor_point(id),
     value DOUBLE PRECISION NOT NULL,
     quality VARCHAR(10) DEFAULT 'good',
-    recorded_at TIMESTAMPTZ NOT NULL
+    recorded_at TIMESTAMPTZ NOT NULL,
+    -- TimescaleDB hypertable 的唯一约束/主键必须包含分区列 recorded_at
+    PRIMARY KEY (id, recorded_at)
 );
 
 COMMENT ON COLUMN timeseries_data.id IS '数据ID';

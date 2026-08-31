@@ -82,6 +82,12 @@ app.include_router(telemetry_router, prefix=settings.API_V1_PREFIX)
 from backend.api.agent import router as agent_router
 app.include_router(agent_router, prefix=settings.API_V1_PREFIX)
 
+from backend.api.predict import router as predict_router
+app.include_router(predict_router, prefix=settings.API_V1_PREFIX)
+
+from backend.api.report import router as report_router
+app.include_router(report_router, prefix=settings.API_V1_PREFIX)
+
 
 # ---------- 启动入口 ----------
 if __name__ == "__main__":

@@ -17,6 +17,10 @@ const routes = [
         meta: { title: '监控面板' }
       },
       {
+        path: '/monitor',
+        redirect: '/dashboard'
+      },
+      {
         path: '/chat',
         name: 'Chat',
         component: () => import('@/views/Chat.vue'),

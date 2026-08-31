@@ -27,6 +27,7 @@ class AgentState(TypedDict, total=False):
         tool_calls:       Tool 调用记录列表
         tool_results:     Tool 返回结果
         final_response:   最终响应文本（返回给前端）
+        report:           Markdown 格式诊断报告
     """
     messages: list[str]
     intent: str
@@ -34,3 +35,4 @@ class AgentState(TypedDict, total=False):
     tool_calls: list[dict[str, Any]]
     tool_results: dict[str, Any]
     final_response: str
+    report: str

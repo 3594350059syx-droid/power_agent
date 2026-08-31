@@ -5,7 +5,7 @@ P0-5: POST /api/v1/agent/chat
 
 流程:
     用户消息 → Agent 工作流（意图识别 → Tool 调用 → 响应生成）
-    → LLM 增强 → 返回结构化结果（reply + chart_data + diagnosis）
+    → LLM 增强 → 返回结构化结果（reply + chart_data + diagnosis + report）
 """
 import logging
 
@@ -60,6 +60,7 @@ def agent_chat(request: ChatRequest):
                     "alarms": [...],
                     "knowledge_refs": [...]
                 },
+                "report": "# 设备诊断报告 ...",
                 "tool_calls": [
                     {"tool": "data_tool", "status": "success"},
                     {"tool": "alarm_tool", "status": "success"}
@@ -87,6 +88,7 @@ def agent_chat(request: ChatRequest):
                 "mode": request.mode,
                 "chart_data": None,
                 "diagnosis": None,
+                "report": None,
                 "tool_calls": [],
             },
         )

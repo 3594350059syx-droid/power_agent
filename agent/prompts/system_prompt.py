@@ -145,6 +145,13 @@ def extract_params(message: str) -> dict:
             params["device_id"] = dev_id
             break
 
+    # 直接传入规范设备 ID 时也保持同一参数契约（报告接口等内部调用会使用此形式）。
+    device_id_match = re.search(
+        r"\b(?:boiler|turbine|generator)_\d{3}\b", message, re.IGNORECASE
+    )
+    if device_id_match:
+        params["device_id"] = device_id_match.group(0).lower()
+
     # 参数名（长词在前，短词在后，避免"温度"吞掉"炉膛温度"）
     param_map = {
         "主蒸汽温度": "steam_temp",
