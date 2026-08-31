@@ -51,7 +51,6 @@ export function getLiveTelemetry(deviceId = 'boiler_002') {
     url: '/telemetry/live',
     method: 'get',
     params: { device_id: deviceId },
-    // Dashboard 每 3 秒轮询一次；失败状态由页面告警统一呈现，避免重复弹窗。
     silent: true
   })
 }
@@ -65,7 +64,6 @@ export function getMultipleDevicesTelemetry(deviceIds = ['boiler_002', 'turbine_
       if (result.status === 'fulfilled') {
         return result.value
       }
-
       return {
         success: false,
         message: result.reason?.message || '请求失败',
@@ -76,4 +74,81 @@ export function getMultipleDevicesTelemetry(deviceIds = ['boiler_002', 'turbine_
       }
     })
   ))
+}
+
+/**
+ * 获取历史趋势数据
+ * @param {string} deviceId - 设备ID
+ * @param {string} parameter - 参数key
+ * @param {number} hours - 时间范围（小时）
+ */
+export function getHistoryTrend(deviceId = 'boiler_002', parameter = 'steam_temp', hours = 24) {
+  if (isMock) {
+    const now = new Date()
+    const timestamps = []
+    const values = []
+    const anomalyRanges = []
+
+    const deviceData = MOCK_DEVICE_DATA[deviceId]
+    if (!deviceData) {
+      return Promise.resolve({
+        success: true,
+        data: { timestamps: [], values: [], anomaly_ranges: [] }
+      })
+    }
+
+    const metric = deviceData.metrics.find(m => m.key === parameter)
+    if (!metric) {
+      return Promise.resolve({
+        success: true,
+        data: { timestamps: [], values: [], anomaly_ranges: [] }
+      })
+    }
+
+    const normalRange = metric.normal_range || [0, 100]
+    const mid = (normalRange[0] + normalRange[1]) / 2
+    const range = (normalRange[1] - normalRange[0]) / 2
+
+    for (let i = hours - 1; i >= 0; i--) {
+      const t = new Date(now.getTime() - i * 3600000)
+      const timestamp = t.toISOString()
+      timestamps.push(timestamp)
+
+      let value = mid + (Math.random() - 0.5) * range * 0.8
+
+      const isAnomaly = Math.random() < 0.1 && values.length > 5
+      if (isAnomaly) {
+        value = normalRange[1] + Math.random() * (normalRange[1] - normalRange[0]) * 0.3
+        const currentRange = anomalyRanges[anomalyRanges.length - 1]
+        if (currentRange && currentRange.end === timestamps[timestamps.length - 2]) {
+          currentRange.end = timestamp
+        } else {
+          anomalyRanges.push({
+            start: timestamp,
+            end: timestamp
+          })
+        }
+      }
+
+      values.push(Math.round(value * 100) / 100)
+    }
+
+    return Promise.resolve({
+      success: true,
+      data: {
+        timestamps,
+        values,
+        anomaly_ranges: anomalyRanges,
+        parameter: parameter,
+        device_id: deviceId,
+        unit: metric.unit || ''
+      }
+    })
+  }
+
+  return request({
+    url: '/telemetry/history',
+    method: 'get',
+    params: { device_id: deviceId, parameter, hours }
+  })
 }
